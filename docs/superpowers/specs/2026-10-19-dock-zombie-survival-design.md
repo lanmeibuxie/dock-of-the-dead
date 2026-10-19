@@ -145,7 +145,9 @@ js/gfx.js           像素绘制、旋转缓存、调色板、贴花层、震屏
 js/sprites.js       部件定义、武器与僵尸外观、像素字体
 js/level.js         码头构建、视差、光源、雨雾
 js/particles.js     血、骨屑、弹壳、火花、烟
+js/combat.js        纯规则：伤害区域倍率、定格/震屏分级、断肢阈值
 js/entities.js      玩家、僵尸、子弹、拾取物、断肢
+js/waves.js         纯规则：波次预算、僵尸组成、精英潮
 js/hud.js           HUD、标题、暂停、结算
 js/game.js          状态机、波次导演、碰撞、主循环
 ```
