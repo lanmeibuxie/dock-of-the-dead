@@ -93,7 +93,11 @@
     if (this.state === 'climb') {
       this.climbT -= dt;
       this.yOff = Math.max(0, this.climbT / 0.8 * 24);
-      if (this.climbT <= 0) { this.state = 'walk'; this.yOff = 0; }
+      if (this.climbT <= 0) {
+        this.state = 'walk';
+        this.yOff = 0;
+        if (G.particles) G.particles.spawnSplash(this.x, this.y + 3, 9);
+      }
       return;
     }
 
@@ -242,6 +246,7 @@
     this.y = (G.level.layout || G.level.build()).groundY;
     this.t = G.rand(0, 6);
     this.life = 22;
+    this.amount = kind === 'medkit' ? 30 : kind === 'ammo_shotgun' ? 6 : kind === 'ammo_smg' ? 24 : 18;
     this.dead = false;
   }
 
@@ -291,6 +296,18 @@
       ctx.fillRect(sx + 1, sy - 1, 1, 3);
     }
   };
+
+  function partDef(z, name) {
+    for (var i = 0; i < z.rig.parts.length; i++) if (z.rig.parts[i].name === name) return z.rig.parts[i];
+    return z.rig.parts[0];
+  }
+
+  function spawnLimb(list, z, ref, x, y, dir, kind) {
+    var vx = dir * G.rand(70, 190) + (kind === 'head' ? dir * 90 : 0);
+    var vy = -G.rand(70, 190);
+    list.push(new Limb(partDef(z, ref), x, y, vx, vy, G.rand(-2, 2), kind || 'limb'));
+    if (list.length > 40) list.shift();
+  }
 
   function Limb(def, x, y, vx, vy, angle, kind) {
     this.def = def;
@@ -349,6 +366,7 @@
   G.entities = G.entities || {};
   G.entities.Zombie = Zombie;
   G.entities.Limb = Limb;
+  G.entities.spawnLimb = spawnLimb;
   G.entities.Pickup = Pickup;
   G.entities.applyPickup = applyPickup;
 })();

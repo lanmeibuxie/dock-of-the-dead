@@ -14,7 +14,7 @@ const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
   page.on('pageerror', e => errors.push('PAGE: ' + e.message));
   await page.goto(url);
   await page.waitForTimeout(600);
-  if (scenario && scenario !== 'title') {
+  if (scenario && scenario !== 'title' && scenario !== 'elite' && scenario !== 'clickstart') {
     await page.keyboard.press('Enter');
     await page.waitForTimeout(320);
   }
@@ -144,6 +144,90 @@ const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
   if (scenario === 'audio') {
     const st = await page.evaluate(() => ({ ready: G.audio.ready, muted: G.audio.muted, state: G.game.state }));
     console.log('AUDIO', JSON.stringify(st));
+  }
+
+  if (scenario === 'hero') {
+    await page.waitForTimeout(2400);
+    await page.evaluate(() => {
+      G.game.zombies.length = 0;
+      G.game.player.hp = 74;
+      G.game.player.current = 'shotgun';
+      const types = [['walker', 82], ['crawler', -70], ['walker', 130], ['brute', 175]];
+      for (const [type, dx] of types) {
+        const z = new G.entities.Zombie(type, G.game.player.x + dx, false);
+        z.stagger = 0.9;
+        G.game.zombies.push(z);
+      }
+    });
+    await page.waitForTimeout(220);
+    const target = await page.evaluate(() => {
+      const z = G.game.zombies.find(z => z.type === 'walker' && z.x > G.game.player.x);
+      const hb = z.hitBoxes().find(b => b.zone === 'head');
+      G.input.mouse.x = G.gfx.cam.toScreenX(hb.x + hb.w / 2);
+      G.input.mouse.y = G.gfx.cam.toScreenY(hb.y + hb.h / 2);
+      G.input.mouse.down = true;
+      return { x: G.input.mouse.x, y: G.input.mouse.y };
+    });
+    await page.waitForTimeout(120);
+    await page.screenshot({ path: out });
+    const st = await page.evaluate(() => ({ stats: G.game.stats, particles: G.particles.count(), limbs: G.game.limbs.length, ammo: G.game.player.weapon().ammo }));
+    console.log('HERO', JSON.stringify(st), 'TARGET', JSON.stringify(target));
+    if (errors.length) console.log(errors.join(String.fromCharCode(10))); else console.log('NO PAGE ERRORS');
+    await browser.close();
+    return;
+  }
+
+  if (scenario === 'clickstart') {
+    await page.mouse.click(480, 270);
+    await page.waitForTimeout(500);
+    const st = await page.evaluate(() => ({ state: G.game.state, wave: G.game.wave, ready: G.audio.ready }));
+    console.log('CLICKSTART', JSON.stringify(st));
+  }
+
+  if (scenario === 'mute') {
+    await page.keyboard.press('KeyM');
+    await page.waitForTimeout(200);
+    const st = await page.evaluate(() => ({ muted: G.audio.muted }));
+    console.log('MUTE', JSON.stringify(st));
+  }
+
+  if (scenario === 'states') {
+    await page.evaluate(() => {
+      G.game.zombies.length = 0;
+      for (let i = 0; i < 2; i++) {
+        const z = new G.entities.Zombie('walker', G.game.player.x + 70 + i * 30, false);
+        z.stagger = 999;
+        G.game.zombies.push(z);
+      }
+    });
+    for (let i = 0; i < 3; i++) {
+      const t = await page.evaluate(() => {
+        const z = G.game.zombies.find(z => !z.dead);
+        if (!z) return null;
+        const hb = z.hitBoxes().find(b => b.zone === 'head');
+        return { sx: G.gfx.cam.toScreenX(hb.x + hb.w / 2), sy: G.gfx.cam.toScreenY(hb.y + hb.h / 2) };
+      });
+      if (!t) break;
+      await page.mouse.move(t.sx * 2, t.sy * 2);
+      await page.mouse.down();
+      await page.waitForTimeout(60);
+      await page.mouse.up();
+      await page.waitForTimeout(500);
+    }
+    const before = await page.evaluate(() => ({ state: G.game.state, score: G.game.score, best: G.hud.best() }));
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(120);
+    const paused = await page.evaluate(() => G.game.state);
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(120);
+    const resumed = await page.evaluate(() => G.game.state);
+    await page.evaluate(() => { G.game.player.hp = 0; });
+    await page.waitForTimeout(900);
+    const dead = await page.evaluate(() => ({ state: G.game.state, best: G.hud.best() }));
+    await page.keyboard.press('KeyR');
+    await page.waitForTimeout(300);
+    const restarted = await page.evaluate(() => ({ state: G.game.state, wave: G.game.wave, hp: G.game.player.hp }));
+    console.log('STATES', JSON.stringify({ before, paused, resumed, dead, restarted }));
   }
 
   if (scenario === 'walk') {

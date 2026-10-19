@@ -30,6 +30,27 @@
     },
     severApplied: function (limbDamage, amount) {
       return limbDamage + amount >= SEVER;
+    },
+    segBoxT: function (x1, y1, x2, y2, b) {
+      var dx = x2 - x1, dy = y2 - y1;
+      var t0 = 0, t1 = 1;
+      if (Math.abs(dx) < 1e-6) {
+        if (x1 < b.x || x1 > b.x + b.w) return null;
+      } else {
+        var ax = (b.x - x1) / dx, bx = (b.x + b.w - x1) / dx;
+        if (ax > bx) { var tx = ax; ax = bx; bx = tx; }
+        t0 = Math.max(t0, ax); t1 = Math.min(t1, bx);
+        if (t0 > t1) return null;
+      }
+      if (Math.abs(dy) < 1e-6) {
+        if (y1 < b.y || y1 > b.y + b.h) return null;
+      } else {
+        var ay = (b.y - y1) / dy, by = (b.y + b.h - y1) / dy;
+        if (ay > by) { var ty = ay; ay = by; by = ty; }
+        t0 = Math.max(t0, ay); t1 = Math.min(t1, by);
+        if (t0 > t1) return null;
+      }
+      return t0;
     }
   };
 })();

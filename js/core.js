@@ -77,6 +77,7 @@
       this.realDt = realDt;
       if (this.hitstopT > 0) {
         this.hitstopT -= realDt;
+        if (this.hitstopT < 0) this.hitstopT = 0;
         this.worldDt = 0;
         return;
       }

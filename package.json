@@ -4,7 +4,9 @@
   "private": true,
   "description": "码头尸潮 — 浏览器像素风横版僵尸生存游戏",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "shot": "node tools/shot.js",
+    "sim": "node tools/sim.js"
   },
   "devDependencies": {
     "playwright-core": "^1.64.1"

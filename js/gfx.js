@@ -30,7 +30,7 @@
     },
     update: function (dt) {
       if (this.trauma > 0) {
-        var amp = this.trauma * this.trauma * 12;
+        var amp = this.trauma * this.trauma * 18;
         this.shakeX = (Math.random() * 2 - 1) * amp;
         this.shakeY = (Math.random() * 2 - 1) * amp * 0.6;
         this.trauma = Math.max(0, this.trauma - dt * 2.2);

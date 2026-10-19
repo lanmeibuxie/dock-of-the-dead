@@ -66,6 +66,22 @@
     }
   }
 
+  function hitboxes(ctx, cam, zombies, player, state) {
+    ctx.strokeStyle = 'rgba(255,70,70,0.55)';
+    ctx.lineWidth = 1;
+    for (var i = 0; i < zombies.length; i++) {
+      if (zombies[i].dead) continue;
+      var boxes = zombies[i].hitBoxes();
+      for (var b = 0; b < boxes.length; b++) {
+        ctx.strokeRect(Math.round(cam.toScreenX(boxes[b].x)) + 0.5, Math.round(cam.toScreenY(boxes[b].y)) + 0.5,
+          Math.round(boxes[b].w), Math.round(boxes[b].h));
+      }
+    }
+    if (player && state !== 'title') {
+      ctx.strokeRect(Math.round(cam.toScreenX(player.x - 7)) + 0.5, Math.round(cam.toScreenY(player.y - 36)) + 0.5, 14, 36);
+    }
+  }
+
   function banner(ctx, text, t) {
     if (t <= 0 || !text) return;
     var a = Math.min(1, t * 1.6);
@@ -80,9 +96,10 @@
     var P = G.gfx.palette;
     var lowHp = p.hp < 30 && p.hp > 0;
 
-    if (lowHp) {
-      var pulse = 0.16 + 0.12 * Math.sin(s.t * 7);
-      var a = pulse * (1 - p.hp / 30);
+    if (lowHp || p.hurtT > 0) {
+      var a = 0;
+      if (lowHp) a = Math.max(a, (0.16 + 0.12 * Math.sin(s.t * 7)) * (1 - p.hp / 30));
+      if (p.hurtT > 0) a = Math.max(a, p.hurtT * 0.55);
       ctx.fillStyle = 'rgba(150,12,22,' + a + ')';
       ctx.fillRect(0, 0, G.W, 10);
       ctx.fillRect(0, G.H - 10, G.W, 10);
@@ -192,6 +209,7 @@
     saveBest: saveBest,
     useStorage: function (s) { injected = s; },
     crosshair: crosshair,
+    hitboxes: hitboxes,
     banner: banner,
     draw: draw,
     title: title,

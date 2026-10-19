@@ -335,7 +335,8 @@
     drawWeather: function (ctx, camX) {
       var i;
       ctx.fillStyle = 'rgba(160,200,200,0.22)';
-      for (i = 0; i < this.rain.length; i++) {
+      var step = (G.game && G.game.lowFx) ? 2 : 1;
+      for (i = 0; i < this.rain.length; i += step) {
         var d = this.rain[i];
         ctx.fillRect(Math.round(d.x), Math.round(d.y), 1, d.l);
       }

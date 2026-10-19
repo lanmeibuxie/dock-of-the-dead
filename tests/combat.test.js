@@ -33,3 +33,10 @@ test('limb severs only when accumulated damage crosses 30', () => {
   assert.strictEqual(C.severApplied(10, 15), false);
   assert.strictEqual(C.severApplied(25, 10), true);
 });
+
+test('segment vs box intersection', () => {
+  const b = { x: 10, y: 10, w: 10, h: 10 };
+  assert.ok(Math.abs(C.segBoxT(0, 15, 30, 15, b) - 1 / 3) < 1e-9);
+  assert.strictEqual(C.segBoxT(0, 25, 30, 25, b), null);
+  assert.strictEqual(C.segBoxT(40, 15, 60, 15, b), null);
+});

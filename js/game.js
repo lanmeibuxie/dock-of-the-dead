@@ -10,6 +10,9 @@
   var hordeDebug = /[?&]debug=horde/.test(location.search);
   var goreDebug = /[?&]debug=gore/.test(location.search);
   var god = /[?&]god=1/.test(location.search);
+  var waveParam = /[?&]wave=(\d+)/.exec(location.search);
+  var slowAcc = 0;
+  var lowFx = false;
 
   var state = 'title';
   var titleT = 0;
@@ -60,6 +63,7 @@
 
   function startWave(n) {
     waveNo = n;
+    G.game.wave = n;
     elite = G.waves.isElite(n);
     spawnQueue = G.waves.compose(n);
     spawned = 0;
@@ -83,6 +87,7 @@
       x = player.x + side * (G.W * 0.55 + G.rand(0, 50));
     }
     if (type === 'brute') x = player.x + side * (G.W * 0.62 + G.rand(0, 30));
+    if (!water && Math.abs(x - player.x) < 90) x = player.x + (player.x < L.length / 2 ? 1 : -1) * G.W * 0.55;
     x = G.clamp(x, 30, L.length - 30);
     var z = new G.entities.Zombie(type, x, water);
     if (elite) { z.hp *= 1.25; z.maxHp *= 1.25; }
@@ -127,40 +132,6 @@
     if (fired.weapon === 'shotgun') G.particles.spawnSmoke(pp.muzzleX, pp.muzzleY, 4);
   }
 
-  function segBoxT(x1, y1, x2, y2, b) {
-    var dx = x2 - x1, dy = y2 - y1;
-    var t0 = 0, t1 = 1;
-    if (Math.abs(dx) < 1e-6) {
-      if (x1 < b.x || x1 > b.x + b.w) return null;
-    } else {
-      var ax = (b.x - x1) / dx, bx = (b.x + b.w - x1) / dx;
-      if (ax > bx) { var tx = ax; ax = bx; bx = tx; }
-      t0 = Math.max(t0, ax); t1 = Math.min(t1, bx);
-      if (t0 > t1) return null;
-    }
-    if (Math.abs(dy) < 1e-6) {
-      if (y1 < b.y || y1 > b.y + b.h) return null;
-    } else {
-      var ay = (b.y - y1) / dy, by = (b.y + b.h - y1) / dy;
-      if (ay > by) { var ty = ay; ay = by; by = ty; }
-      t0 = Math.max(t0, ay); t1 = Math.min(t1, by);
-      if (t0 > t1) return null;
-    }
-    return t0;
-  }
-
-  function partDef(z, name) {
-    for (var i = 0; i < z.rig.parts.length; i++) if (z.rig.parts[i].name === name) return z.rig.parts[i];
-    return z.rig.parts[0];
-  }
-
-  function spawnLimb(z, ref, x, y, dir, kind) {
-    var vx = dir * G.rand(70, 190) + (kind === 'head' ? dir * 90 : 0);
-    var vy = -G.rand(70, 190);
-    limbs.push(new G.entities.Limb(partDef(z, ref), x, y, vx, vy, G.rand(-2, 2), kind || 'limb'));
-    if (limbs.length > 40) limbs.shift();
-  }
-
   function applyHit(z, box, shot) {
     var dir = Math.cos(shot.angle) >= 0 ? 1 : -1;
     var res = G.combat.resolve({ damage: shot.damage, zone: box.zone });
@@ -185,7 +156,7 @@
     if (res.headshot) stats.headshots++;
 
     if (out.severed) {
-      spawnLimb(z, box.ref, hx, hy, dir, 'limb');
+      G.entities.spawnLimb(limbs, z, box.ref, hx, hy, dir, 'limb');
       G.particles.spawnBlood(hx, hy, dir, 18);
     }
     if (out.killed) {
@@ -194,7 +165,7 @@
       if (G.chance(0.06)) spawnLoot(z.x);
       if (res.headshot) {
         z.hide.head = true;
-        spawnLimb(z, 'head', hx, hy, dir, 'head');
+        G.entities.spawnLimb(limbs, z, 'head', hx, hy, dir, 'head');
         G.particles.spawnBlood(hx, hy, dir, 46);
         G.particles.spawnBone(hx, hy, dir, 12);
         G.time.slowmo(0.32, 0.35);
@@ -214,7 +185,7 @@
       if (z.dead) continue;
       var boxes = z.hitBoxes();
       for (var b = 0; b < boxes.length; b++) {
-        var t = segBoxT(shot.px, shot.py, shot.x, shot.y, boxes[b]);
+        var t = G.combat.segBoxT(shot.px, shot.py, shot.x, shot.y, boxes[b]);
         if (t != null && (!best || t < best.t)) best = { z: z, box: boxes[b], t: t };
       }
     }
@@ -282,6 +253,19 @@
       zombies[z].update(dt, player);
       if (zombies[z].dead && zombies[z].deathT > 22) zombies.splice(z, 1);
     }
+    for (var zc = 0; zc < zombies.length; zc++) zombies[zc].x = G.clamp(zombies[zc].x, 20, G.level.layout.length - 20);
+    for (var a = 0; a < zombies.length; a++) {
+      if (zombies[a].dead) continue;
+      for (var b = a + 1; b < zombies.length; b++) {
+        if (zombies[b].dead) continue;
+        var sep = zombies[b].x - zombies[a].x;
+        if (Math.abs(sep) < 12 && Math.abs(zombies[a].yOff - zombies[b].yOff) < 8) {
+          var push = (12 - Math.abs(sep)) * 0.5 * (sep >= 0 ? 1 : -1);
+          zombies[a].x -= push;
+          zombies[b].x += push;
+        }
+      }
+    }
     for (var li = limbs.length - 1; li >= 0; li--) {
       limbs[li].update(dt);
       if (limbs[li].dead) limbs.splice(li, 1);
@@ -327,6 +311,7 @@
         lights.push({ x: p.muzzleX, y: p.muzzleY, r: 85 });
       }
     }
+    if (debug) G.hud.hitboxes(ctx, cam, zombies, player, state);
     G.level.drawLighting(ctx, cam.x, lights);
     if (state !== 'title') G.particles.draw(ctx);
     G.level.drawWeather(ctx, cam.x);
@@ -362,7 +347,7 @@
     resetGame();
   }
 
-  function resetGame() {
+  function resetGame(startWaveAt) {
     setState('playing');
     titleT = 0;
     deadT = 0;
@@ -371,6 +356,7 @@
     hitKill = false;
     volleyLock = 0;
     stats = { kills: 0, headshots: 0, shots: 0, hits: 0 };
+    G.game.stats = stats;
     shots.length = 0;
     zombies.length = 0;
     limbs.length = 0;
@@ -383,7 +369,7 @@
     G.game.player = player;
     G.input.mouse.down = false;
     G.input.mouse.clicked = false;
-    startWave(1);
+    startWave(startWaveAt || 1);
   }
 
   function loop(ts) {
@@ -393,7 +379,7 @@
     if (debug) {
       frames++;
       fpsAcc += dt;
-      if (fpsAcc >= 0.5) { fps = Math.round(frames / fpsAcc); frames = 0; fpsAcc = 0; }
+      if (fpsAcc >= 0.5) { fps = Math.round(frames / fpsAcc); frames = 0; fpsAcc = 0; G.game.fps = fps; }
     }
 
     if (G.input.pressed('KeyM') && G.audio) G.audio.toggleMute();
@@ -428,8 +414,15 @@
     ctx.fillRect(0, 0, G.W, G.H);
     drawWorld();
 
+    if (dt > 0.026) slowAcc += dt; else slowAcc = Math.max(0, slowAcc - dt * 0.6);
+    if (!lowFx && slowAcc > 1.6) {
+      lowFx = true;
+      G.game.lowFx = true;
+      G.particles.setCap(280);
+    }
+
     if (debug) {
-      G.sprites.font(fps + ' FPS', G.W / 2, 4, '#7fff9f', 1, 'center');
+      G.sprites.font(fps + ' FPS' + (lowFx ? ' LOWFX' : ''), G.W / 2, 4, '#7fff9f', 1, 'center');
       G.sprites.font('Z ' + zombies.length + ' SHOTS ' + shots.length, G.W / 2, G.H - 8, '#7fff9f', 1, 'center');
     }
 
@@ -441,6 +434,7 @@
   G.game.state = 'title';
   G.game.debug = debug;
   G.game.god = god;
+  G.game.lowFx = false;
 
   G.game.boot = function () {
     canvas = document.getElementById('game');
@@ -461,6 +455,9 @@
     });
     fit();
     window.addEventListener('resize', fit);
+    if (waveParam) {
+      resetGame(parseInt(waveParam[1], 10) || 1);
+    }
     if (hordeDebug || goreDebug) {
       resetGame();
       if (goreDebug) {
@@ -470,7 +467,7 @@
         var gz = new G.entities.Zombie('walker', player.x + 105, false);
         zombies.push(gz);
         gz.hit('limb', 40, 1, 'shotgun', 'legF');
-        spawnLimb(gz, 'legF', gz.x - 3, G.level.layout.groundY - 12, 1, 'limb');
+        G.entities.spawnLimb(limbs, gz, 'legF', gz.x - 3, G.level.layout.groundY - 12, 1, 'limb');
         applyHit(gz, { zone: 'head', ref: 'head' }, {
           x: gz.x, y: G.level.layout.groundY - 34, px: gz.x - 30, py: G.level.layout.groundY - 34,
           angle: 0, damage: 24, weapon: 'shotgun'

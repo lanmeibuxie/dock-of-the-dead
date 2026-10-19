@@ -235,10 +235,6 @@
     ctx.fillRect(Math.round(sx - 8), Math.round(sy - 2), 16, 3);
     var pose = this.pose();
     G.sprites.drawRig(ctx, G.sprites.playerRig, pose, sx, sy);
-    if (this.hurtT > 0) {
-      ctx.fillStyle = 'rgba(190,30,40,' + (this.hurtT * 0.7) + ')';
-      ctx.fillRect(Math.round(sx - 9), Math.round(sy - 38), 18, 38);
-    }
     if (this.invuln > 0 && Math.floor(this.invuln * 20) % 2 === 0) {
       ctx.fillStyle = 'rgba(255,255,255,0.10)';
       ctx.fillRect(Math.round(sx - 9), Math.round(sy - 38), 18, 38);

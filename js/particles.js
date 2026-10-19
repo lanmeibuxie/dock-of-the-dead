@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   var G = globalThis.G;
-  var MAX = 600;
+  var cap = 600;
   var pool = null;
 
   function make() {
@@ -20,7 +20,7 @@
 
   function get() {
     init();
-    if (pool.live.length >= MAX) return null;
+    if (pool.live.length >= cap) return null;
     var p = pool.get();
     p.rest = false;
     p.bounced = false;
@@ -39,6 +39,7 @@
 
   var api = {
     init: init,
+    setCap: function (n) { cap = n; },
     count: function () { init(); return pool.live.length; },
     clear: function () { if (pool) pool.clear(); },
 
@@ -184,7 +185,7 @@
               p.vx *= 0.6;
               p.bounced = true;
             } else {
-              G.level.addBlood(p.x, gy + G.rand(1, 7), p.size * 2, p.vx > 0 ? 1 : -1);
+              if (G.chance(0.55)) G.level.addBlood(p.x, gy + G.rand(1, 7), p.size * 2, p.vx > 0 ? 1 : -1);
               release(p);
               continue;
             }
