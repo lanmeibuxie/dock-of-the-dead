@@ -207,6 +207,7 @@
     var facing = pose.facing || 1;
     var aim = pose.aim == null ? (facing > 0 ? 0 : Math.PI) : pose.aim;
     var ta = pose.torsoAngle || 0;
+    var hipX = x;
     var hipY = y - rig.legLen;
     var torsoVec = rot(0, -rig.torsoH, ta);
     var shoulderVec = rot(0, -rig.shoulderH, ta);
@@ -220,6 +221,14 @@
     var armLen = Math.max(3, rig.armLen - (pose.recoil || 0));
     var handX = shoulderX + Math.cos(armF) * armLen;
     var handY = shoulderY + Math.sin(armF) * armLen;
+    var handBX = shoulderX + Math.cos(armB) * armLen;
+    var handBY = shoulderY + Math.sin(armB) * armLen;
+    var legF = pose.legF == null ? 0 : pose.legF;
+    var legB = pose.legB == null ? 0 : pose.legB;
+    var footFX = hipX - Math.sin(legF) * rig.legLen;
+    var footFY = hipY + Math.cos(legF) * rig.legLen;
+    var footBX = hipX - Math.sin(legB) * rig.legLen;
+    var footBY = hipY + Math.cos(legB) * rig.legLen;
     var wdef = pose.gun ? G.content.weapons[pose.gun] : null;
     var muzzle = wdef ? wdef.muzzle : 8;
     return {
@@ -228,6 +237,9 @@
       shoulderX: shoulderX, shoulderY: shoulderY + bob,
       headX: headX, headY: headY,
       handX: handX, handY: handY + bob,
+      handBX: handBX, handBY: handBY + bob,
+      footFX: footFX, footFY: footFY + bob,
+      footBX: footBX, footBY: footBY + bob,
       armF: armF, armB: armB,
       muzzleX: handX + Math.cos(armF) * muzzle,
       muzzleY: handY + bob + Math.sin(armF) * muzzle
@@ -305,13 +317,27 @@
     hitBoxes: function (rig, pose, x, y) {
       var p = rigPoints(rig, pose, x, y);
       var scale = rig.headH / 9;
+      var hide = pose.hide || {};
       var boxes = [];
-      boxes.push({ zone: 'head', x: p.headX - 5 * scale, y: p.headY - rig.headH, w: 10 * scale, h: rig.headH, ref: 'head' });
-      var tx = (p.hipX + p.torsoTopX) / 2, ty = (p.hipY + p.torsoTopY) / 2;
-      boxes.push({ zone: 'torso', x: tx - 7 * scale, y: ty - rig.torsoH / 2, w: 14 * scale, h: rig.torsoH, ref: 'torso' });
-      var mx = (p.shoulderX + p.handX) / 2, my = (p.shoulderY + p.handY) / 2;
-      boxes.push({ zone: 'limb', x: mx - 4 * scale, y: my - rig.armLen / 2, w: 8 * scale, h: rig.armLen, ref: 'armF' });
-      boxes.push({ zone: 'limb', x: p.hipX - 4 * scale, y: p.hipY + rig.legLen / 2 - 2, w: 8 * scale, h: rig.legLen, ref: 'legF' });
+      function seg(ref, x1, y1, x2, y2, padW, padH) {
+        boxes.push({
+          zone: 'limb', ref: ref,
+          x: Math.min(x1, x2) - padW, y: Math.min(y1, y2) - padH,
+          w: Math.abs(x2 - x1) + padW * 2, h: Math.abs(y2 - y1) + padH * 2
+        });
+      }
+      if (!hide.head) {
+        boxes.push({ zone: 'head', x: p.headX - 5 * scale, y: p.headY - rig.headH, w: 10 * scale, h: rig.headH, ref: 'head' });
+      }
+      if (!hide.torso) {
+        var tx0 = Math.min(p.hipX, p.torsoTopX), tx1 = Math.max(p.hipX, p.torsoTopX);
+        var ty0 = Math.min(p.hipY, p.torsoTopY), ty1 = Math.max(p.hipY, p.torsoTopY);
+        boxes.push({ zone: 'torso', ref: 'torso', x: tx0 - 6 * scale, y: ty0 - 3 * scale, w: (tx1 - tx0) + 12 * scale, h: (ty1 - ty0) + 6 * scale });
+      }
+      if (!hide.armF) seg('armF', p.shoulderX, p.shoulderY, p.handX, p.handY, 3 * scale, 3 * scale);
+      if (!hide.armB) seg('armB', p.shoulderX, p.shoulderY, p.handBX, p.handBY, 3 * scale, 3 * scale);
+      if (!hide.legF) seg('legF', p.hipX, p.hipY, p.footFX, p.footFY, 3 * scale, 2 * scale);
+      if (!hide.legB) seg('legB', p.hipX, p.hipY, p.footBX, p.footBY, 3 * scale, 2 * scale);
       return boxes;
     }
   };

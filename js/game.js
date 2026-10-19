@@ -1,4 +1,4 @@
-/* 码头尸潮 — 主循环、波次导演、实体管理 */
+/* 码头尸潮 — 状态机、波次导演、实体管理、主循环 */
 (function () {
   'use strict';
   var G = globalThis.G;
@@ -8,9 +8,17 @@
   var fps = 60, frames = 0, fpsAcc = 0;
   var debug = /[?&]debug=1/.test(location.search);
   var hordeDebug = /[?&]debug=horde/.test(location.search);
+  var goreDebug = /[?&]debug=gore/.test(location.search);
+  var god = /[?&]god=1/.test(location.search);
+
+  var state = 'title';
+  var titleT = 0;
+  var deadT = 0;
   var player = null;
   var shots = [];
   var zombies = [];
+  var limbs = [];
+  var pickups = [];
   var waveNo = 0;
   var waveState = 'fight';
   var spawnQueue = [];
@@ -21,13 +29,33 @@
   var bannerT = 0;
   var bannerText = '';
   var score = 0;
-  var dead = false;
-  var deadT = 0;
+  var hitMark = 0;
+  var hitKill = false;
+  var volleyLock = 0;
+  var stats = { kills: 0, headshots: 0, shots: 0, hits: 0 };
+
+  function setState(s) {
+    state = s;
+    G.game.state = s;
+  }
 
   function fit() {
     var s = Math.max(1, Math.floor(Math.min(window.innerWidth / G.W, window.innerHeight / G.H)));
     canvas.style.width = (G.W * s) + 'px';
     canvas.style.height = (G.H * s) + 'px';
+  }
+
+  function lootKind() {
+    var r = Math.random();
+    if (r < 0.4) return 'medkit';
+    if (player.current === 'smg') return 'ammo_smg';
+    if (player.current === 'pistol') return G.chance(0.5) ? 'ammo_pistol' : 'ammo_shotgun';
+    return 'ammo_shotgun';
+  }
+
+  function spawnLoot(x) {
+    var L = G.level.layout;
+    pickups.push(new G.entities.Pickup(lootKind(), G.clamp(x, 30, L.length - 30)));
   }
 
   function startWave(n) {
@@ -39,6 +67,7 @@
     waveState = 'fight';
     bannerT = 2.2;
     bannerText = elite ? 'ELITE WAVE ' + n : 'WAVE ' + n;
+    if (G.audio) { if (elite) G.audio.thunder(); else G.audio.foghorn(); }
   }
 
   function spawnOne() {
@@ -59,6 +88,7 @@
     if (elite) { z.hp *= 1.25; z.maxHp *= 1.25; }
     zombies.push(z);
     spawned++;
+    if (G.audio && G.chance(0.4)) G.audio.groan(G.clamp((x - player.x) / 220, -1, 1));
   }
 
   function kick() {
@@ -72,18 +102,127 @@
         z.stagger = Math.max(z.stagger, 0.45);
         z.knockVx = dir * 300 * (z.def.resist || 1);
         G.gfx.cam.shake(2.2);
+        G.particles.spawnBlood(z.x, G.level.layout.groundY - 18, dir, 9);
+        if (G.audio) G.audio.kick();
+        G.time.hitstop(0.04);
+        hitMark = 0.1;
+        hitKill = false;
       }
     }
   }
 
   function shoot() {
-    if (dead) return;
+    if (state !== 'playing') return;
     var fired = player.fire();
     if (!fired) return;
     for (var i = 0; i < fired.angles.length; i++) {
       shots.push(new G.entities.Shot(fired.x, fired.y, fired.angles[i], fired.damage, fired.weapon, fired.knock));
     }
+    stats.shots += fired.angles.length;
     G.gfx.cam.shake(fired.weapon === 'shotgun' ? 2.6 : fired.weapon === 'smg' ? 0.8 : 1.1);
+    if (G.audio) { G.audio.shot(fired.weapon); G.audio.shell(); }
+    var pp = player.points();
+    G.particles.spawnShell(pp.handX, pp.handY - 2, player.facing);
+    G.particles.spawnSparks(pp.muzzleX, pp.muzzleY, player.facing, fired.weapon === 'shotgun' ? 5 : 2);
+    if (fired.weapon === 'shotgun') G.particles.spawnSmoke(pp.muzzleX, pp.muzzleY, 4);
+  }
+
+  function segBoxT(x1, y1, x2, y2, b) {
+    var dx = x2 - x1, dy = y2 - y1;
+    var t0 = 0, t1 = 1;
+    if (Math.abs(dx) < 1e-6) {
+      if (x1 < b.x || x1 > b.x + b.w) return null;
+    } else {
+      var ax = (b.x - x1) / dx, bx = (b.x + b.w - x1) / dx;
+      if (ax > bx) { var tx = ax; ax = bx; bx = tx; }
+      t0 = Math.max(t0, ax); t1 = Math.min(t1, bx);
+      if (t0 > t1) return null;
+    }
+    if (Math.abs(dy) < 1e-6) {
+      if (y1 < b.y || y1 > b.y + b.h) return null;
+    } else {
+      var ay = (b.y - y1) / dy, by = (b.y + b.h - y1) / dy;
+      if (ay > by) { var ty = ay; ay = by; by = ty; }
+      t0 = Math.max(t0, ay); t1 = Math.min(t1, by);
+      if (t0 > t1) return null;
+    }
+    return t0;
+  }
+
+  function partDef(z, name) {
+    for (var i = 0; i < z.rig.parts.length; i++) if (z.rig.parts[i].name === name) return z.rig.parts[i];
+    return z.rig.parts[0];
+  }
+
+  function spawnLimb(z, ref, x, y, dir, kind) {
+    var vx = dir * G.rand(70, 190) + (kind === 'head' ? dir * 90 : 0);
+    var vy = -G.rand(70, 190);
+    limbs.push(new G.entities.Limb(partDef(z, ref), x, y, vx, vy, G.rand(-2, 2), kind || 'limb'));
+    if (limbs.length > 40) limbs.shift();
+  }
+
+  function applyHit(z, box, shot) {
+    var dir = Math.cos(shot.angle) >= 0 ? 1 : -1;
+    var res = G.combat.resolve({ damage: shot.damage, zone: box.zone });
+    var hx = shot.x, hy = shot.y;
+    var out = z.hit(box.zone, res.amount, dir, shot.weapon, box.ref);
+    var gy = G.level.layout.groundY;
+
+    if (volleyLock <= 0) {
+      G.time.hitstop(G.combat.hitstop(shot.weapon, res.headshot));
+      volleyLock = 0.07;
+    }
+    G.gfx.cam.shake(G.combat.shake(shot.weapon, res.headshot));
+    if (G.audio) G.audio.flesh(res.headshot, G.clamp((z.x - player.x) / 220, -1, 1));
+    hitMark = 0.1;
+    hitKill = out.killed;
+
+    G.particles.spawnBlood(hx, hy, dir, res.headshot ? 34 : 14);
+    G.level.addBlood(hx, gy + G.rand(1, 8), res.headshot ? 9 : 5, dir);
+    if (res.headshot) G.particles.spawnBone(hx, hy, dir, 7);
+
+    stats.hits++;
+    if (res.headshot) stats.headshots++;
+
+    if (out.severed) {
+      spawnLimb(z, box.ref, hx, hy, dir, 'limb');
+      G.particles.spawnBlood(hx, hy, dir, 18);
+    }
+    if (out.killed) {
+      stats.kills++;
+      score += (z.def.score || 10) * (elite ? 2 : 1);
+      if (G.chance(0.06)) spawnLoot(z.x);
+      if (res.headshot) {
+        z.hide.head = true;
+        spawnLimb(z, 'head', hx, hy, dir, 'head');
+        G.particles.spawnBlood(hx, hy, dir, 46);
+        G.particles.spawnBone(hx, hy, dir, 12);
+        G.time.slowmo(0.32, 0.35);
+        G.gfx.cam.shake(4);
+      } else {
+        G.particles.spawnGib(hx, hy, dir, 4);
+        G.particles.spawnBlood(hx, hy, dir, 26);
+        G.level.addBlood(hx, gy + G.rand(1, 8), 12, dir);
+      }
+    }
+  }
+
+  function resolveShot(shot) {
+    var best = null;
+    for (var i = 0; i < zombies.length; i++) {
+      var z = zombies[i];
+      if (z.dead) continue;
+      var boxes = z.hitBoxes();
+      for (var b = 0; b < boxes.length; b++) {
+        var t = segBoxT(shot.px, shot.py, shot.x, shot.y, boxes[b]);
+        if (t != null && (!best || t < best.t)) best = { z: z, box: boxes[b], t: t };
+      }
+    }
+    if (!best) return;
+    shot.x = shot.px + (shot.x - shot.px) * best.t;
+    shot.y = shot.py + (shot.y - shot.py) * best.t;
+    shot.dead = true;
+    applyHit(best.z, best.box, shot);
   }
 
   function updateWaves(dt) {
@@ -102,6 +241,9 @@
           breathT = G.waves.breath(waveNo);
           bannerT = 2.4;
           bannerText = 'WAVE CLEAR';
+          if (G.audio) G.audio.foghorn();
+          spawnLoot(player.x - 55);
+          spawnLoot(player.x + 65);
         }
       }
     } else {
@@ -110,12 +252,20 @@
     }
   }
 
-  function updateWorld(dt) {
-    if (dead) {
-      deadT += dt;
-      if (G.input.pressed('KeyR')) location.reload();
-      return;
-    }
+  function die() {
+    if (state === 'dead') return;
+    setState('dead');
+    deadT = 0;
+    G.hud.saveBest(score);
+    player.hp = 0;
+    G.time.slowmo(0.9, 0.3);
+    G.particles.spawnBlood(player.x, player.y - 22, player.facing, 30);
+    G.gfx.cam.shake(5);
+    if (G.audio) G.audio.thunder();
+  }
+
+  function updateWorld(dt, realDt) {
+    if (state === 'dead') { deadT += realDt; return; }
     player.update(dt);
     if (player.kickRequested) {
       player.kickRequested = false;
@@ -125,75 +275,28 @@
 
     for (var s = shots.length - 1; s >= 0; s--) {
       shots[s].update(dt);
+      if (!shots[s].dead) resolveShot(shots[s]);
       if (shots[s].dead) shots.splice(s, 1);
     }
     for (var z = zombies.length - 1; z >= 0; z--) {
       zombies[z].update(dt, player);
       if (zombies[z].dead && zombies[z].deathT > 22) zombies.splice(z, 1);
     }
+    for (var li = limbs.length - 1; li >= 0; li--) {
+      limbs[li].update(dt);
+      if (limbs[li].dead) limbs.splice(li, 1);
+    }
+    for (var pi = pickups.length - 1; pi >= 0; pi--) {
+      pickups[pi].update(dt, player);
+      if (pickups[pi].dead) pickups.splice(pi, 1);
+    }
+    G.particles.update(realDt);
+    hitMark = Math.max(0, hitMark - realDt);
+    volleyLock = Math.max(0, volleyLock - realDt);
     updateWaves(dt);
-    if (player.hp <= 0) { dead = true; deadT = 0; G.time.slowmo(0.9, 0.3); }
-
+    if (player.hp <= 0) die();
     bannerT = Math.max(0, bannerT - dt);
     G.gfx.cam.follow(player.x, G.H / 2, dt, { minX: 0, maxX: G.level.layout.length });
-  }
-
-  function drawCrosshair() {
-    var m = G.input.mouse;
-    var x = Math.round(m.x), y = Math.round(m.y);
-    ctx.fillStyle = 'rgba(232,227,208,0.85)';
-    ctx.fillRect(x - 6, y, 4, 1);
-    ctx.fillRect(x + 3, y, 4, 1);
-    ctx.fillRect(x, y - 6, 1, 4);
-    ctx.fillRect(x, y + 3, 1, 4);
-    ctx.fillStyle = 'rgba(232,227,208,0.55)';
-    ctx.fillRect(x, y, 1, 1);
-  }
-
-  function drawHud() {
-    var w = player.weapon();
-    G.sprites.font('WAVE ' + waveNo, 6, 6, elite ? '#e06a5a' : '#e8e3d0', 1);
-    if (elite) G.sprites.font('ELITE', 6, 14, '#c8393f', 1);
-    G.sprites.font('SCORE ' + score, G.W - 6, 6, '#c9c2a8', 1, 'right');
-
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
-    ctx.fillRect(7, G.H - 18, 86, 9);
-    ctx.fillStyle = '#3a1216';
-    ctx.fillRect(8, G.H - 17, 84, 7);
-    var hpw = Math.max(0, Math.round(84 * player.hp / player.maxHp));
-    ctx.fillStyle = player.hp < 30 ? '#d33a3a' : '#a8242e';
-    ctx.fillRect(8, G.H - 17, hpw, 7);
-    ctx.fillStyle = 'rgba(255,255,255,0.18)';
-    ctx.fillRect(8, G.H - 17, hpw, 1);
-    G.sprites.font('HP', 9, G.H - 27, '#a8b0a0', 1);
-
-    G.sprites.font(w.def.name, G.W - 6, G.H - 27, '#a8b0a0', 1, 'right');
-    G.sprites.font(w.ammo + ' / ' + (w.reserve === Infinity ? '\u221e' : w.reserve), G.W - 6, G.H - 17, w.ammo === 0 ? '#d33a3a' : '#e8e3d0', 1, 'right');
-    if (w.reloading) {
-      ctx.fillStyle = '#e8e3d0';
-      ctx.fillRect(G.W - 66, G.H - 7, 60, 2);
-      ctx.fillStyle = '#ffc46b';
-      var prog = 1 - w.reloadT / w.def.reload;
-      ctx.fillRect(G.W - 66, G.H - 7, Math.round(60 * prog), 2);
-    }
-
-    if (bannerT > 0) {
-      var a = Math.min(1, bannerT * 1.4);
-      ctx.globalAlpha = a;
-      G.sprites.font(bannerText, G.W / 2, 54, bannerText === 'WAVE CLEAR' ? '#7fff9f' : '#e8e3d0', 3, 'center');
-      ctx.globalAlpha = 1;
-    }
-    if (waveState === 'breath' && bannerT <= 0) {
-      G.sprites.font('NEXT WAVE ' + Math.ceil(breathT), G.W / 2, 44, '#c9c2a8', 1, 'center');
-    }
-
-    if (dead) {
-      ctx.fillStyle = 'rgba(20,0,0,0.45)';
-      ctx.fillRect(0, 0, G.W, G.H);
-      G.sprites.font('YOU DIED', G.W / 2, 100, '#b8242e', 4, 'center');
-      G.sprites.font('WAVE ' + waveNo + '   SCORE ' + score, G.W / 2, 132, '#c9c2a8', 1, 'center');
-      G.sprites.font('PRESS R TO RESTART', G.W / 2, 150, '#e8e3d0', 1, 'center');
-    }
   }
 
   function drawWorld() {
@@ -201,23 +304,86 @@
     G.level.drawBg(ctx, cam.x);
     G.level.drawDeck(ctx, cam.x);
 
-    for (var z = 0; z < zombies.length; z++) zombies[z].draw(ctx);
-    for (var i = 0; i < shots.length; i++) shots[i].draw(ctx);
-    if (!dead) player.draw(ctx);
-    else G.sprites.drawRig(ctx, G.sprites.playerRig, {
-      aim: player.aim, facing: player.facing, armF: player.aim, armB: player.aim + 0.2,
-      legF: 1.1, legB: 0.6, gun: player.current, torsoAngle: player.facing * 1.4
-    }, cam.toScreenX(player.x), cam.toScreenY(player.y));
+    if (state !== 'title') {
+      for (var pk = 0; pk < pickups.length; pk++) pickups[pk].draw(ctx);
+      for (var li = 0; li < limbs.length; li++) limbs[li].draw(ctx);
+      for (var z = 0; z < zombies.length; z++) zombies[z].draw(ctx);
+      for (var i = 0; i < shots.length; i++) shots[i].draw(ctx);
+      if (state === 'dead') {
+        G.sprites.drawRig(ctx, G.sprites.playerRig, {
+          aim: player.aim, facing: player.facing, armF: player.aim, armB: player.aim + 0.2,
+          legF: 1.1, legB: 0.6, gun: player.current, torsoAngle: player.facing * 1.4
+        }, cam.toScreenX(player.x), cam.toScreenY(player.y));
+      } else {
+        player.draw(ctx);
+      }
+    }
 
-    var lights = [{ x: player.x, y: player.y - 20, r: 95 }];
-    if (player.flash > 0) {
-      var p = player.points();
-      lights.push({ x: p.muzzleX, y: p.muzzleY, r: 85 });
+    var lights = [];
+    if (player && state !== 'title') {
+      lights.push({ x: player.x, y: player.y - 20, r: 95 });
+      if (player.flash > 0) {
+        var p = player.points();
+        lights.push({ x: p.muzzleX, y: p.muzzleY, r: 85 });
+      }
     }
     G.level.drawLighting(ctx, cam.x, lights);
+    if (state !== 'title') G.particles.draw(ctx);
     G.level.drawWeather(ctx, cam.x);
-    drawCrosshair();
-    drawHud();
+
+    if (state === 'title') {
+      G.hud.title(ctx, titleT, G.hud.best());
+      return;
+    }
+
+    G.hud.draw(ctx, {
+      player: player, wave: waveNo, elite: elite, score: score,
+      waveState: waveState, breathT: breathT,
+      bannerText: (state === 'paused' || state === 'dead') ? '' : bannerText,
+      bannerT: (state === 'paused' || state === 'dead') ? 0 : bannerT,
+      muted: G.audio ? G.audio.muted : false, t: G.level.time
+    });
+    if (state === 'playing') {
+      var spread = 4 + (player.switchT > 0 ? 2 : 0) + player.recoil * 1.6;
+      G.hud.crosshair(ctx, G.input.mouse, hitMark, hitKill, spread);
+    }
+    if (state === 'paused') G.hud.pause(ctx);
+    if (state === 'dead' && deadT > 0.7) {
+      var acc = stats.shots ? Math.round(stats.hits / stats.shots * 100) : 0;
+      G.hud.gameover(ctx, {
+        wave: waveNo, score: score, kills: stats.kills, headshots: stats.headshots,
+        accuracy: acc, best: G.hud.best()
+      });
+    }
+  }
+
+  function startGame() {
+    if (G.audio) G.audio.init();
+    resetGame();
+  }
+
+  function resetGame() {
+    setState('playing');
+    titleT = 0;
+    deadT = 0;
+    score = 0;
+    hitMark = 0;
+    hitKill = false;
+    volleyLock = 0;
+    stats = { kills: 0, headshots: 0, shots: 0, hits: 0 };
+    shots.length = 0;
+    zombies.length = 0;
+    limbs.length = 0;
+    pickups.length = 0;
+    G.time.reset();
+    G.gfx.cam.reset();
+    G.level.reset();
+    if (G.particles) G.particles.clear();
+    player = new G.entities.Player(300);
+    G.game.player = player;
+    G.input.mouse.down = false;
+    G.input.mouse.clicked = false;
+    startWave(1);
   }
 
   function loop(ts) {
@@ -230,9 +396,32 @@
       if (fpsAcc >= 0.5) { fps = Math.round(frames / fpsAcc); frames = 0; fpsAcc = 0; }
     }
 
-    G.gfx.cam.update(dt);
-    G.level.update(G.time.worldDt, G.gfx.cam.x);
-    updateWorld(G.time.worldDt);
+    if (G.input.pressed('KeyM') && G.audio) G.audio.toggleMute();
+
+    if (state === 'title') {
+      titleT += dt;
+      G.gfx.cam.x = 80 + Math.sin(titleT * 0.12) * 60;
+      G.level.update(dt, G.gfx.cam.x);
+      if (G.input.mouse.clicked || G.input.pressed('Space') || G.input.pressed('Enter')) startGame();
+    } else if (state === 'playing') {
+      if (G.input.pressed('Escape')) setState('paused');
+      else {
+        G.gfx.cam.update(dt);
+        G.level.update(G.time.worldDt, G.gfx.cam.x);
+        updateWorld(G.time.worldDt, dt);
+      }
+    } else if (state === 'paused') {
+      if (G.input.pressed('Escape')) setState('playing');
+    } else if (state === 'dead') {
+      deadT += dt;
+      G.gfx.cam.update(dt);
+      G.level.update(dt, G.gfx.cam.x);
+      G.particles.update(dt);
+      if (G.input.pressed('KeyR')) resetGame();
+      else if (G.input.pressed('Escape')) { setState('title'); titleT = 0; G.gfx.cam.reset(); }
+    }
+
+    if (G.audio && player && state !== 'title') G.audio.update(dt, player.hp);
 
     ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = '#0b1418';
@@ -240,7 +429,7 @@
     drawWorld();
 
     if (debug) {
-      G.sprites.font(fps + ' FPS', G.W - 4, 4, '#7fff9f', 1, 'right');
+      G.sprites.font(fps + ' FPS', G.W / 2, 4, '#7fff9f', 1, 'center');
       G.sprites.font('Z ' + zombies.length + ' SHOTS ' + shots.length, G.W / 2, G.H - 8, '#7fff9f', 1, 'center');
     }
 
@@ -249,8 +438,9 @@
   }
 
   G.game = G.game || {};
-  G.game.state = 'playing';
+  G.game.state = 'title';
   G.game.debug = debug;
+  G.game.god = god;
 
   G.game.boot = function () {
     canvas = document.getElementById('game');
@@ -259,20 +449,48 @@
     G.gfx.init(canvas);
     G.input.init(canvas);
     G.level.reset();
-    player = new G.entities.Player(300);
-    G.game.player = player;
+    var unlock = function () { if (G.audio) G.audio.init(); };
+    window.addEventListener('pointerdown', unlock);
+    window.addEventListener('keydown', unlock);
+    G.game.zombies = zombies;
+    G.game.shots = shots;
+    G.game.limbs = limbs;
+    G.game.pickups = pickups;
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden && state === 'playing') setState('paused');
+    });
     fit();
     window.addEventListener('resize', fit);
-    startWave(1);
-    if (hordeDebug) {
-      var types = ['walker', 'walker', 'crawler', 'walker', 'brute', 'crawler', 'walker', 'walker'];
-      for (var i = 0; i < types.length; i++) {
-        var hx = G.clamp(player.x + (i % 2 === 0 ? 1 : -1) * G.rand(55, 205), 40, G.level.layout.length - 40);
-        zombies.push(new G.entities.Zombie(types[i], hx, false));
+    if (hordeDebug || goreDebug) {
+      resetGame();
+      if (goreDebug) {
+        spawnQueue = [];
+        waveState = 'fight';
+        bannerT = 0;
+        var gz = new G.entities.Zombie('walker', player.x + 105, false);
+        zombies.push(gz);
+        gz.hit('limb', 40, 1, 'shotgun', 'legF');
+        spawnLimb(gz, 'legF', gz.x - 3, G.level.layout.groundY - 12, 1, 'limb');
+        applyHit(gz, { zone: 'head', ref: 'head' }, {
+          x: gz.x, y: G.level.layout.groundY - 34, px: gz.x - 30, py: G.level.layout.groundY - 34,
+          angle: 0, damage: 24, weapon: 'shotgun'
+        });
+        for (var gi = 0; gi < 45; gi++) {
+          G.particles.update(1 / 60);
+          for (var gl = 0; gl < limbs.length; gl++) limbs[gl].update(1 / 60);
+          gz.deathT += 1 / 60;
+        }
+        gz.flash = 0;
+        hitMark = 0;
+      } else {
+        var types = ['walker', 'walker', 'crawler', 'walker', 'brute', 'crawler', 'walker', 'walker'];
+        for (var i = 0; i < types.length; i++) {
+          var hx = G.clamp(player.x + (i % 2 === 0 ? 1 : -1) * G.rand(55, 205), 40, G.level.layout.length - 40);
+          zombies.push(new G.entities.Zombie(types[i], hx, false));
+        }
+        spawnQueue = [];
+        bannerT = 0;
       }
-      spawnQueue = [];
-      waveState = 'fight';
-      bannerT = 0;
     }
     requestAnimationFrame(loop);
   };

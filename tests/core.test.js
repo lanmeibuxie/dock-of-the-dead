@@ -58,3 +58,29 @@ test('camera shake decays to zero', () => {
   assert.strictEqual(cam.trauma, 0);
   assert.strictEqual(cam.shakeX, 0);
 });
+
+require('../js/audio.js');
+
+test('audio API is safe before init', () => {
+  assert.doesNotThrow(() => {
+    G.audio.shot('shotgun');
+    G.audio.flesh(true);
+    G.audio.setMuted(true);
+  });
+  assert.strictEqual(G.audio.muted, true);
+});
+
+require('../js/hud.js');
+
+test('score and best score formatting', () => {
+  assert.strictEqual(G.hud.formatScore(12345), '12,345');
+  assert.strictEqual(G.hud.formatTime(65), '01:05');
+});
+
+test('best score persists via injected storage', () => {
+  const mem = {};
+  G.hud.useStorage({ getItem: k => mem[k] || null, setItem: (k, v) => { mem[k] = String(v); } });
+  assert.strictEqual(G.hud.best(), 0);
+  G.hud.saveBest(4200);
+  assert.strictEqual(G.hud.best(), 4200);
+});

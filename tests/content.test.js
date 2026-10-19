@@ -3,6 +3,7 @@ const assert = require('node:assert');
 require('../js/core.js');
 require('../js/sprites.js');
 require('../js/level.js');
+require('../js/player.js');
 require('../js/entities.js');
 const G = globalThis.G;
 
@@ -55,4 +56,25 @@ test('shotgun has 8 pellets and longer cooldown than smg', () => {
   const smg = new G.entities.Weapon('smg');
   assert.strictEqual(sg.def.pellets, 8);
   assert.ok(sg.def.rate > smg.def.rate);
+});
+
+test('pickup restores ammo and medkit heals', () => {
+  const pl = { hp: 40, maxHp: 100, weapons: {} };
+  pl.weapons.shotgun = new G.entities.Weapon('shotgun');
+  pl.weapons.shotgun.reserve = 0;
+  G.entities.applyPickup(pl, { kind: 'ammo_shotgun', amount: 12 });
+  assert.strictEqual(pl.weapons.shotgun.reserve, 12);
+  G.entities.applyPickup(pl, { kind: 'medkit', amount: 30 });
+  assert.strictEqual(pl.hp, 70);
+});
+
+test('switch weapon changes fire interval and cancels reload', () => {
+  const pl = new G.entities.Player(300);
+  const sg = pl.weapons.shotgun;
+  sg.ammo = 3;
+  sg.startReload();
+  assert.strictEqual(pl.switchTo('shotgun'), true);
+  assert.strictEqual(pl.current, 'shotgun');
+  assert.strictEqual(sg.reloading, false);
+  assert.strictEqual(pl.switchTo('shotgun'), false);
 });
