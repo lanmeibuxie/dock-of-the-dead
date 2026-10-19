@@ -78,3 +78,12 @@ test('switch weapon changes fire interval and cancels reload', () => {
   assert.strictEqual(sg.reloading, false);
   assert.strictEqual(pl.switchTo('shotgun'), false);
 });
+
+test('minigun and new zombies are configured', () => {
+  const m = G.content.weapons.minigun;
+  assert.strictEqual(m.mag, 150);
+  assert.strictEqual(m.rate, 0.03);
+  assert.strictEqual(m.reserve, 150);
+  assert.strictEqual(G.content.zombies.runner.damage, 9);
+  assert.strictEqual(G.content.zombies.bomber.fuse, 0.7);
+});

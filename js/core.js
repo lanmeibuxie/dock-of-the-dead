@@ -24,12 +24,15 @@
     weapons: {
       pistol: { id: 'pistol', name: 'PISTOL', damage: 24, rate: 0.22, mag: 12, reserve: Infinity, pellets: 1, spread: 0, reload: 1.0, knock: 70, recoil: 1, muzzle: 10 },
       shotgun: { id: 'shotgun', name: 'SHOTGUN', damage: 12, rate: 0.75, mag: 6, reserve: 36, pellets: 8, spread: 0.16, reload: 1.4, knock: 180, recoil: 3, muzzle: 14 },
-      smg: { id: 'smg', name: 'SMG', damage: 14, rate: 0.075, mag: 30, reserve: 120, pellets: 1, spread: 0.09, reload: 1.25, knock: 55, recoil: 1.2, muzzle: 13 }
+      smg: { id: 'smg', name: 'SMG', damage: 14, rate: 0.075, mag: 30, reserve: 120, pellets: 1, spread: 0.09, reload: 1.25, knock: 55, recoil: 1.2, muzzle: 13 },
+      minigun: { id: 'minigun', name: 'MINIGUN', damage: 9, rate: 0.03, mag: 150, reserve: 150, pellets: 1, spread: 0.10, reload: 3.2, knock: 22, recoil: 0.35, muzzle: 26, spinUp: 0.55, spinDown: 0.5, moveSlow: 0.35 }
     },
     zombies: {
       walker: { id: 'walker', hp: 60, speed: 34, damage: 12, reach: 20, attackRate: 1.15, windup: 0.35, width: 14, height: 38, score: 10 },
       crawler: { id: 'crawler', hp: 28, speed: 78, damage: 8, reach: 18, attackRate: 0.9, windup: 0.22, width: 16, height: 14, score: 12 },
-      brute: { id: 'brute', hp: 260, speed: 24, damage: 26, reach: 26, attackRate: 1.6, windup: 0.6, width: 24, height: 58, resist: 0.5, score: 50 }
+      brute: { id: 'brute', hp: 260, speed: 24, damage: 26, reach: 26, attackRate: 1.6, windup: 0.6, width: 24, height: 58, resist: 0.5, score: 50 },
+      runner: { id: 'runner', hp: 38, speed: 100, damage: 9, reach: 16, attackRate: 0.9, windup: 0.16, width: 12, height: 34, score: 15 },
+      bomber: { id: 'bomber', hp: 70, speed: 30, damage: 26, reach: 26, attackRate: 2, windup: 0.5, width: 18, height: 40, score: 25, fuse: 0.7, bombRadius: 60, chainRadius: 50, chainDamage: 45 }
     }
   };
 
