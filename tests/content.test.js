@@ -3,6 +3,7 @@ const assert = require('node:assert');
 require('../js/core.js');
 require('../js/sprites.js');
 require('../js/level.js');
+require('../js/entities.js');
 const G = globalThis.G;
 
 test('player rig has all animated parts', () => {
@@ -31,4 +32,27 @@ test('each weapon and zombie config is complete', () => {
     const z = G.content.zombies[id];
     assert.ok(z.hp > 0 && z.speed > 0 && z.damage > 0);
   }
+});
+
+test('pistol respects fire rate and magazine, reserve is infinite', () => {
+  const w = new G.entities.Weapon('pistol');
+  assert.strictEqual(w.ammo, 12);
+  assert.strictEqual(w.tryFire(0), true);
+  assert.strictEqual(w.ammo, 11);
+  assert.strictEqual(w.tryFire(0.01), false, 'rate limit');
+  assert.strictEqual(w.tryFire(0.3), true);
+  w.ammo = 0;
+  assert.strictEqual(w.tryFire(1), false, 'empty');
+  w.startReload();
+  assert.strictEqual(w.reloading, true);
+  w.finishReload();
+  assert.strictEqual(w.ammo, 12);
+  assert.strictEqual(w.reserve, Infinity);
+});
+
+test('shotgun has 8 pellets and longer cooldown than smg', () => {
+  const sg = new G.entities.Weapon('shotgun');
+  const smg = new G.entities.Weapon('smg');
+  assert.strictEqual(sg.def.pellets, 8);
+  assert.ok(sg.def.rate > smg.def.rate);
 });

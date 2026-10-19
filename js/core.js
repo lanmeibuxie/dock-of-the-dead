@@ -92,7 +92,7 @@
   G.input = {
     keys: Object.create(null),
     pressedSet: Object.create(null),
-    mouse: { x: G.W / 2, y: G.H / 2, down: false, clicked: false, wheel: 0 },
+    mouse: { x: G.W * 0.72, y: G.H * 0.5, down: false, clicked: false, wheel: 0 },
     canvas: null,
     init: function (canvas) {
       this.canvas = canvas;

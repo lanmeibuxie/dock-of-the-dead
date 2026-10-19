@@ -217,8 +217,9 @@
     var headY = torsoTopY + (pose.headOffY || 0) + bob;
     var armF = pose.armF == null ? aim : pose.armF;
     var armB = pose.armB == null ? aim + 0.18 : pose.armB;
-    var handX = shoulderX + Math.cos(armF) * rig.armLen;
-    var handY = shoulderY + Math.sin(armF) * rig.armLen;
+    var armLen = Math.max(3, rig.armLen - (pose.recoil || 0));
+    var handX = shoulderX + Math.cos(armF) * armLen;
+    var handY = shoulderY + Math.sin(armF) * armLen;
     var wdef = pose.gun ? G.content.weapons[pose.gun] : null;
     var muzzle = wdef ? wdef.muzzle : 8;
     return {
