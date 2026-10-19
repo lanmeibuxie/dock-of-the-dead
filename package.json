@@ -4,6 +4,6 @@
   "private": true,
   "description": "码头尸潮 — 浏览器像素风横版僵尸生存游戏",
   "scripts": {
-    "test": "node --test tests/"
+    "test": "node --test"
   }
 }

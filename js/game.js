@@ -9,32 +9,38 @@
   var debug = /[?&]debug=1/.test(location.search);
   var debugScene = /[?&]debug=scene/.test(location.search);
   var sceneX = 300;
+  var walkPhase = 0;
 
-  function drawDebugScene(ctx) {
+  function drawDebugScene(ctx, dt) {
     var pal = G.gfx.palette;
     var cam = G.gfx.cam;
-    G.gfx.clear(pal.night);
-    G.gfx.rect(0, 130, G.W, 66, pal.deep);
-    G.gfx.rect(0, 196, G.W, G.H - 196, pal.wood);
-    var off = -Math.round(cam.x) % 16;
-    for (var x = off - 16; x < G.W + 16; x += 16) {
-      G.gfx.rect(x, 196, 1, G.H - 196, pal.woodDark);
-    }
-    for (var wx = 0; wx < 2400; wx += 120) {
-      var sx = G.gfx.cam.toScreenX(wx);
-      if (sx > -20 && sx < G.W + 20) G.gfx.rect(sx, 150, 4, 46, pal.metalDark);
-    }
-    var px = G.gfx.cam.toScreenX(sceneX);
-    G.gfx.rect(px - 6, 174, 12, 22, pal.cloth);
-    G.gfx.rect(px - 5, 164, 10, 10, pal.skin);
-    G.gfx.rect(px + 6, 176, 10, 3, pal.metal);
-    G.gfx.rect(px + 4, 170, 8, 6, pal.metalDark);
+    G.level.update(G.time.worldDt, cam.x);
+    ctx.fillStyle = pal.night;
+    ctx.fillRect(0, 0, G.W, G.H);
+    G.level.drawBg(ctx, cam.x);
+    G.level.drawDeck(ctx, cam.x);
+
+    var gy = G.level.layout.groundY;
+    var mx = (G.input.down('KeyD') ? 1 : 0) - (G.input.down('KeyA') ? 1 : 0);
+    if (mx !== 0) walkPhase += G.time.worldDt * 11;
+    var px = Math.round(G.gfx.cam.toScreenX(sceneX));
+    var py = gy;
     var m = G.input.mouse;
-    G.gfx.rect(m.x - 5, m.y, 11, 1, pal.white);
-    G.gfx.rect(m.x, m.y - 5, 1, 11, pal.white);
-    ctx.fillStyle = pal.green;
-    ctx.font = '8px monospace';
-    ctx.fillText('DEBUG SCENE  A/D MOVE', 6, 12);
+    var aim = Math.atan2(m.y - (py - 24), m.x - px);
+    var swing = mx !== 0 ? Math.sin(walkPhase) * 0.55 : 0;
+    var pose = {
+      aim: aim, facing: Math.cos(aim) >= 0 ? 1 : -1,
+      armF: aim, armB: aim + 0.22,
+      legF: swing + 0.05, legB: -swing + 0.05,
+      gun: 'pistol', flash: 0,
+      bob: mx !== 0 ? Math.round(Math.abs(Math.sin(walkPhase)) * -1) : 0
+    };
+    G.sprites.drawRig(ctx, G.sprites.playerRig, pose, px, py);
+
+    G.level.drawLighting(ctx, cam.x, [{ x: px, y: py - 18, r: 95 }]);
+    G.level.drawWeather(ctx, cam.x);
+
+    G.sprites.font('DEBUG SCENE  A/D MOVE', 6, 8, pal.green, 1);
   }
 
   function fit() {
@@ -61,7 +67,7 @@
     if (debugScene) {
       sceneX += ((G.input.down('KeyD') ? 1 : 0) - (G.input.down('KeyA') ? 1 : 0)) * 90 * G.time.worldDt;
       G.gfx.cam.follow(sceneX, 100, dt, { minX: 0, maxX: 2400 });
-      drawDebugScene(ctx);
+      drawDebugScene(ctx, dt);
     }
 
     if (G.game.update) G.game.update(G.time.worldDt, dt);
@@ -89,6 +95,7 @@
     ctx.imageSmoothingEnabled = false;
     G.gfx.init(canvas);
     G.input.init(canvas);
+    G.level.reset();
     if (debugScene) { G.gfx.cam.x = 60; }
     fit();
     window.addEventListener('resize', fit);
