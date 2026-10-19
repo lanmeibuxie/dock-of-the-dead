@@ -6,7 +6,8 @@
   "scripts": {
     "test": "node --test",
     "shot": "node tools/shot.js",
-    "sim": "node tools/sim.js"
+    "sim": "node tools/sim.js",
+    "font": "python tools/genfont.py"
   },
   "devDependencies": {
     "playwright-core": "^1.64.1"

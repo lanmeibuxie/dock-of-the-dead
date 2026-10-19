@@ -13,6 +13,11 @@
     this.yOff = fromWater ? 24 : 0;
     this.hp = def.hp;
     this.maxHp = def.hp;
+    this.damage = def.damage;
+    this.speed = def.speed;
+    this.fuseT = 0;
+    this.exploded = false;
+    this.boomQueued = false;
     this.state = fromWater ? 'climb' : 'walk';
     this.climbT = fromWater ? 0.8 : 0;
     this.stagger = 0;
@@ -57,6 +62,13 @@
       armB = f > 0 ? -1.0 : Math.PI + 1.0;
       legF = 0.8;
       legB = 0.4;
+    }
+    if (this.state === 'fuse') {
+      armF = f > 0 ? -1.5 : Math.PI + 1.5;
+      armB = f > 0 ? 1.5 : Math.PI - 1.5;
+      legF = 0.3 + Math.sin(this.walkPhase) * 0.2;
+      legB = -0.3 - Math.sin(this.walkPhase) * 0.2;
+      ta = f * 0.16;
     }
     if (crawler) {
       legF = 1.2 + w * 0.2;
@@ -108,17 +120,30 @@
       return;
     }
 
+    if (this.type === 'bomber' && this.state === 'fuse') {
+      this.fuseT -= dt;
+      this.walkPhase += dt * 10;
+      if (this.fuseT <= 0 && G.game) G.game.explodeBomber(this);
+      return;
+    }
+
     var dx = player.x - this.x;
     var dist = Math.abs(dx);
     this.facing = dx >= 0 ? 1 : -1;
+
+    if (this.type === 'bomber' && dist < 46) {
+      this.state = 'fuse';
+      this.fuseT = this.def.fuse;
+      return;
+    }
 
     if (this.state === 'attack') {
       this.windupT -= dt;
       this.recoverT -= dt;
       if (this.windupT <= 0 && !this.hitDone) {
         this.hitDone = true;
-        if (Math.abs(player.x - this.x) < this.def.reach + 12 && player.takeDamage(this.def.damage, this.facing)) {
-          G.gfx.cam.shake(G.combat.hurtShake(this.def.damage));
+        if (Math.abs(player.x - this.x) < this.def.reach + 12 && player.takeDamage(this.damage, this.facing)) {
+          G.gfx.cam.shake(G.combat.hurtShake(this.damage));
           if (G.particles) G.particles.spawnBlood(player.x, player.y - 22, this.facing, 7);
         }
       }
@@ -132,7 +157,7 @@
       if (!this.hitDone && Math.abs(player.x - this.x) < 18) {
         this.hitDone = true;
         if (player.takeDamage(this.def.damage, this.facing)) {
-          G.gfx.cam.shake(G.combat.hurtShake(this.def.damage));
+          G.gfx.cam.shake(G.combat.hurtShake(this.damage));
           if (G.particles) G.particles.spawnBlood(player.x, player.y - 22, this.facing, 5);
         }
       }
@@ -157,17 +182,17 @@
     }
 
     if (dist > this.def.reach - 2) {
-      this.x += this.facing * this.def.speed * dt;
-      this.walkPhase += dt * (this.type === 'crawler' ? 12 : this.type === 'brute' ? 4 : 6);
+      this.x += this.facing * this.speed * dt;
+      this.walkPhase += dt * (this.type === 'crawler' ? 12 : this.type === 'runner' ? 14 : this.type === 'brute' ? 4 : 6);
     }
   };
 
-  Zombie.prototype.hit = function (zone, damage, dirX, weapon, ref) {
+  Zombie.prototype.hit = function (zone, damage, dirX, weapon, ref, knockScale) {
     if (this.dead) return { killed: false, headshot: zone === 'head', severed: false, damage: 0 };
     this.hp -= damage;
     this.flash = 0.06;
     this.stagger = Math.max(this.stagger, (weapon === 'shotgun' ? 0.26 : weapon === 'smg' ? 0.09 : 0.14) * (this.def.resist ? 0.7 : 1));
-    this.knockVx = (dirX || 1) * (weapon === 'shotgun' ? 190 : weapon === 'pistol' ? 95 : 58) * (this.def.resist || 1);
+    this.knockVx = (dirX || 1) * (weapon === 'shotgun' ? 190 : weapon === 'pistol' ? 95 : 58) * (this.def.resist || 1) * (knockScale || 1);
     this.state = 'walk';
     this.windupT = 0;
     this.recoverT = 0;
@@ -188,6 +213,7 @@
       this.deathT = 0;
       this.hp = 0;
       killed = true;
+      if (this.type === 'bomber' && G.game && G.game.queueBoom) G.game.queueBoom(this);
     }
     return { killed: killed, headshot: zone === 'head', severed: severed, damage: damage };
   };
@@ -195,6 +221,14 @@
   Zombie.prototype.draw = function (ctx) {
     var sx = G.gfx.cam.toScreenX(this.x);
     var sy = G.gfx.cam.toScreenY(this.y + this.yOff);
+    if (this.type === 'bomber' && !this.dead) {
+      var pulse = 0.5 + 0.5 * Math.sin((G.level.time || 0) * (this.state === 'fuse' ? 24 : 8));
+      var gl = ctx.createRadialGradient(sx, sy - 20, 2, sx, sy - 20, 30);
+      gl.addColorStop(0, 'rgba(150,220,90,' + (0.08 + 0.18 * pulse) + ')');
+      gl.addColorStop(1, 'rgba(90,170,60,0)');
+      ctx.fillStyle = gl;
+      ctx.fillRect(sx - 30, sy - 50, 60, 60);
+    }
     var alpha = this.dead ? Math.max(0.55, 1 - this.deathT * 0.05) : 1;
     ctx.globalAlpha = alpha;
     if (!this.dead) {
@@ -233,10 +267,10 @@
       player.hp = Math.min(player.maxHp, player.hp + (p.amount || 30));
       return true;
     }
-    var map = { ammo_pistol: 'pistol', ammo_shotgun: 'shotgun', ammo_smg: 'smg' };
+    var map = { ammo_pistol: 'pistol', ammo_shotgun: 'shotgun', ammo_smg: 'smg', ammo_minigun: 'minigun' };
     var w = player.weapons[map[p.kind]];
     if (!w) return false;
-    if (w.reserve !== Infinity) w.reserve += (p.amount || 10);
+    if (w.reserve !== Infinity) w.reserve += Math.round((p.amount || 10) * (1 + (player.mods ? player.mods.ammo : 0)));
     return true;
   }
 
@@ -246,7 +280,7 @@
     this.y = (G.level.layout || G.level.build()).groundY;
     this.t = G.rand(0, 6);
     this.life = 22;
-    this.amount = kind === 'medkit' ? 30 : kind === 'ammo_shotgun' ? 6 : kind === 'ammo_smg' ? 24 : 18;
+    this.amount = kind === 'medkit' ? 30 : kind === 'ammo_shotgun' ? 6 : kind === 'ammo_smg' ? 24 : kind === 'ammo_minigun' ? 60 : 18;
     this.dead = false;
   }
 
@@ -255,7 +289,8 @@
     this.t += dt;
     this.life -= dt;
     if (this.life <= 0) { this.dead = true; return; }
-    if (Math.abs(player.x - this.x) < 17 && Math.abs(player.y - this.y) < 32) {
+    var reach = 17 * (1 + (player.mods ? player.mods.pickup : 0));
+    if (Math.abs(player.x - this.x) < reach && Math.abs(player.y - this.y) < 32) {
       if (applyPickup(player, this)) {
         this.dead = true;
         if (G.audio) G.audio.pickup();
@@ -283,7 +318,7 @@
       ctx.fillStyle = '#8f8a7a';
       ctx.fillRect(sx - 5, sy + 1, 10, 1);
     } else {
-      var col = this.kind === 'ammo_shotgun' ? '#8e3a2a' : this.kind === 'ammo_smg' ? '#a8862c' : '#5a6260';
+      var col = this.kind === 'ammo_shotgun' ? '#8e3a2a' : this.kind === 'ammo_smg' ? '#a8862c' : this.kind === 'ammo_minigun' ? '#6a5a3a' : '#5a6260';
       ctx.fillStyle = col;
       ctx.fillRect(sx - 5, sy - 5, 10, 7);
       ctx.fillStyle = 'rgba(255,255,255,0.18)';

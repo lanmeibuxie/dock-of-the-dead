@@ -40,3 +40,8 @@ test('segment vs box intersection', () => {
   assert.strictEqual(C.segBoxT(0, 25, 30, 25, b), null);
   assert.strictEqual(C.segBoxT(40, 15, 60, 15, b), null);
 });
+
+test('minigun uses a shorter hitstop than the pistol', () => {
+  assert.ok(C.hitstop('minigun', false) < C.hitstop('pistol', false));
+  assert.strictEqual(C.shake('minigun', false), 0.15);
+});

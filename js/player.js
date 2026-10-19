@@ -12,6 +12,9 @@
     this.reloading = false;
     this.reloadT = 0;
     this.nextFire = 0;
+    this.rateMult = 1;
+    this.reloadMult = 1;
+    this.magSize = def.mag;
   }
 
   Weapon.prototype.update = function (dt) {
@@ -24,21 +27,21 @@
   Weapon.prototype.tryFire = function (now) {
     if (this.reloading || now < this.nextFire || this.ammo <= 0) return false;
     this.ammo--;
-    this.nextFire = now + this.def.rate;
+    this.nextFire = now + this.def.rate / this.rateMult;
     return true;
   };
 
   Weapon.prototype.startReload = function () {
     if (this.reloading) return false;
-    if (this.ammo >= this.def.mag) return false;
+    if (this.ammo >= this.magSize) return false;
     if (this.reserve <= 0) return false;
     this.reloading = true;
-    this.reloadT = this.def.reload;
+    this.reloadT = this.def.reload / this.reloadMult;
     return true;
   };
 
   Weapon.prototype.finishReload = function () {
-    var need = this.def.mag - this.ammo;
+    var need = Math.max(0, this.magSize - this.ammo);
     var take = Math.min(need, this.reserve);
     this.ammo += take;
     if (this.reserve !== Infinity) this.reserve -= take;
@@ -71,14 +74,59 @@
     this.weapons = {
       pistol: new Weapon('pistol'),
       shotgun: new Weapon('shotgun'),
-      smg: new Weapon('smg')
+      smg: new Weapon('smg'),
+      minigun: new Weapon('minigun')
     };
-    this.order = ['pistol', 'shotgun', 'smg'];
+    this.order = ['pistol', 'shotgun', 'smg', 'minigun'];
     this.current = 'pistol';
     this.moving = false;
+    this.spin = 0;
+    this.mods = {
+      damage: 0, fireRate: 0, reload: 0, mag: 0, speed: 0, crit: 0, critMult: 2,
+      pierce: 0, knock: 0, lifesteal: 0, pickup: 0, ammo: 0, recoil: 0
+    };
+    this.syncMods();
   }
 
   Player.prototype.weapon = function () { return this.weapons[this.current]; };
+
+  Player.prototype.syncMods = function () {
+    var m = this.mods;
+    m.damage = Math.min(3, m.damage);
+    m.fireRate = Math.min(2, m.fireRate);
+    m.reload = Math.min(2, m.reload);
+    m.mag = Math.min(3, m.mag);
+    m.speed = Math.min(0.6, m.speed);
+    m.crit = Math.min(0.6, m.crit);
+    m.critMult = Math.min(4, m.critMult);
+    m.knock = Math.min(1.5, m.knock);
+    m.pickup = Math.min(3, m.pickup);
+    m.ammo = Math.min(3, m.ammo);
+    m.recoil = Math.max(-0.7, m.recoil);
+    for (var i = 0; i < this.order.length; i++) {
+      var w = this.weapons[this.order[i]];
+      w.rateMult = 1 + m.fireRate;
+      w.reloadMult = 1 + m.reload;
+      w.magSize = Math.max(1, Math.round(w.def.mag * (1 + m.mag)));
+      if (w.ammo > w.magSize) w.ammo = w.magSize;
+    }
+  };
+
+  Player.prototype.speedScale = function () {
+    var s = 1 + this.mods.speed;
+    if (this.current === 'minigun') s *= 1 - 0.35 * this.spin;
+    return s;
+  };
+
+  Player.prototype.stepSpin = function (dt, holding) {
+    var def = G.content.weapons.minigun;
+    if (holding) this.spin = Math.min(1, this.spin + dt / def.spinUp);
+    else this.spin = Math.max(0, this.spin - dt / def.spinDown);
+  };
+
+  Player.prototype.heal = function (n) {
+    this.hp = Math.min(this.maxHp, this.hp + n);
+  };
 
   Player.prototype.switchTo = function (id) {
     if (!this.weapons[id] || this.current === id) return false;
@@ -88,6 +136,7 @@
     w.reloadT = 0;
     w.nextFire = this.clock + 0.25;
     this.recoil = 0;
+    this.spin = 0;
     this.switchT = 0.25;
     return true;
   };
@@ -109,6 +158,7 @@
       gun: this.current,
       flash: this.flash > 0 ? 1 : 0,
       recoil: this.recoil,
+      spin: this.spin,
       bob: bob,
       torsoAngle: 0
     };
@@ -124,7 +174,7 @@
 
     var move = (G.input.down('KeyD') || G.input.down('ArrowRight') ? 1 : 0) -
       (G.input.down('KeyA') || G.input.down('ArrowLeft') ? 1 : 0);
-    var target = move * 110;
+    var target = move * 110 * this.speedScale();
     var accel = this.onGround ? 1 - Math.pow(0.00005, dt) : 1 - Math.pow(0.03, dt);
     this.vx += (target - this.vx) * accel;
     if (Math.abs(this.vx) < 2 && move === 0) this.vx = 0;
@@ -162,16 +212,23 @@
     if (G.input.pressed('Digit1')) this.switchTo('pistol');
     if (G.input.pressed('Digit2')) this.switchTo('shotgun');
     if (G.input.pressed('Digit3')) this.switchTo('smg');
+    if (G.input.pressed('Digit4')) this.switchTo('minigun');
     if (G.input.mouse.wheel !== 0) {
       var idx = this.order.indexOf(this.current);
-      idx = (idx + (G.input.mouse.wheel > 0 ? 1 : -1) + 3) % 3;
+      idx = (idx + (G.input.mouse.wheel > 0 ? 1 : -1) + 4) % 4;
       this.switchTo(this.order[idx]);
     }
 
     var w = this.weapon();
     w.update(dt);
+    var holding = this.current === 'minigun' && !w.reloading &&
+      (G.input.mouse.down || G.input.mouse.clicked) && w.ammo > 0;
+    var spinBefore = this.spin;
+    this.stepSpin(dt, holding);
+    if (holding && spinBefore < 0.02 && this.spin > 0 && G.audio) G.audio.minigunSpin();
     if ((G.input.pressed('KeyR') || G.input.pressed('ShiftLeft') || G.input.pressed('ShiftRight')) && w.startReload()) {
       this.reloadRequested = true;
+      this.spin = 0;
       if (G.audio) G.audio.reload();
     }
 
@@ -190,10 +247,12 @@
 
   Player.prototype.fire = function () {
     var w = this.weapon();
+    if (this.current === 'minigun' && this.spin < 0.999) return null;
     if (!w.tryFire(this.clock)) return null;
     var def = w.def;
     var pellets = def.pellets;
     var angles = [];
+    var crits = [];
     if (pellets === 1) {
       angles.push(this.aim + G.rand(-def.spread, def.spread) * 0.5);
     } else {
@@ -202,17 +261,24 @@
         angles.push(this.aim + base + G.rand(-0.018, 0.018));
       }
     }
+    for (var c = 0; c < pellets; c++) crits.push(G.chance(this.mods.crit));
     var p = this.points();
     this.flash = 0.06;
-    this.recoil = Math.min(7, this.recoil + def.recoil);
+    this.recoil = Math.min(10, this.recoil + def.recoil * (1 + this.mods.recoil));
     this.hurtT = Math.max(this.hurtT, 0);
+    var amount = def.damage * (1 + this.mods.damage);
     return {
       weapon: this.current,
       angles: angles,
-      x: p.muzzleX,
-      y: p.muzzleY,
-      damage: def.damage,
-      knock: def.knock
+      crits: crits,
+      crit: crits[0],
+      x: this.x + Math.cos(this.aim) * 8,
+      y: this.y - 23 + Math.sin(this.aim) * 8,
+      damage: amount,
+      amount: amount,
+      knock: def.knock,
+      knockScale: 1 + this.mods.knock,
+      pierce: this.mods.pierce
     };
   };
 
@@ -241,7 +307,12 @@
     }
   };
 
-  function Shot(x, y, angle, damage, weapon, knock) {
+  function Shot(x, y, angle, damage, weapon, knock, opts) {
+    opts = opts || {};
+    this.crit = !!opts.crit;
+    this.pierce = opts.pierce || 0;
+    this.knockScale = opts.knockScale || 1;
+    this.hitList = [];
     this.x = x;
     this.y = y;
     this.angle = angle;

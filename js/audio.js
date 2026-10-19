@@ -148,6 +148,9 @@
       } else if (weapon === 'smg') {
         burst(0.06, 'highpass', 700, 0.8, 0.34, 0, G.rand(0.88, 1.12));
         tone('sine', 230, 80, 0.07, 0.2);
+      } else if (weapon === 'minigun') {
+        burst(0.045, 'highpass', 950, 0.7, 0.3, 0, G.rand(0.9, 1.1));
+        tone('sine', 260, 110, 0.05, 0.16);
       } else {
         burst(0.1, 'highpass', 420, 0.7, 0.48, 0, G.rand(0.92, 1.08));
         tone('sine', 185, 58, 0.12, 0.34);
@@ -211,6 +214,33 @@
       if (!ctx) return;
       tone('sine', 660, 660, 0.07, 0.22);
       tone('sine', 990, 990, 0.09, 0.2, 0, 0.08);
+    },
+
+    minigunSpin: function () {
+      if (!ctx) return;
+      var t = ctx.currentTime;
+      var src = ctx.createBufferSource();
+      src.buffer = noiseBuf;
+      src.loop = true;
+      var f = ctx.createBiquadFilter();
+      f.type = 'bandpass';
+      f.frequency.setValueAtTime(260, t);
+      f.frequency.linearRampToValueAtTime(900, t + 0.4);
+      f.Q.value = 1.2;
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.13, t + 0.35);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+      src.connect(f); f.connect(g); out(g, 0);
+      src.start(t); src.stop(t + 0.62);
+      tone('sawtooth', 60, 180, 0.5, 0.08);
+    },
+
+    explosion: function () {
+      if (!ctx) return;
+      burst(1.1, 'lowpass', 220, 0.9, 0.6, 0, 0.7);
+      tone('sine', 64, 24, 1.0, 0.55);
+      burst(0.18, 'highpass', 800, 0.7, 0.25);
     },
 
     thunder: function () {

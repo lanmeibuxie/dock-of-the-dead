@@ -14,7 +14,7 @@ const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
   page.on('pageerror', e => errors.push('PAGE: ' + e.message));
   await page.goto(url);
   await page.waitForTimeout(600);
-  if (scenario && scenario !== 'title' && scenario !== 'elite' && scenario !== 'clickstart') {
+  if (scenario && !['title','elite','clickstart','upgradepick'].includes(scenario)) {
     await page.keyboard.press('Enter');
     await page.waitForTimeout(320);
   }
@@ -108,6 +108,72 @@ const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
     }));
     console.log('HEADSHOT', JSON.stringify(st));
     if (errors.length) console.log(errors.join('\n')); else console.log('NO PAGE ERRORS');
+    await browser.close();
+    return;
+  }
+
+  if (scenario === 'upgradepick') {
+    await page.waitForTimeout(300);
+    await page.mouse.click(184, 270);
+    await page.waitForTimeout(250);
+    const st = await page.evaluate(() => ({
+      state: G.game.state, waveState: 'breath', toast: G.game.state,
+      levels: G.game.state, mods: G.game.player.mods.damage
+    }));
+    console.log('UPGRADEPICK', JSON.stringify(st));
+    await page.screenshot({ path: out });
+    if (errors.length) console.log(errors.join(String.fromCharCode(10))); else console.log('NO PAGE ERRORS');
+    await browser.close();
+    return;
+  }
+
+  if (scenario === 'minigun') {
+    await page.keyboard.press('Digit4');
+    await page.waitForTimeout(200);
+    const target = await page.evaluate(() => {
+      G.game.zombies.length = 0;
+      const z = new G.entities.Zombie('brute', G.game.player.x + 120, false);
+      z.stagger = 999;
+      G.game.zombies.push(z);
+      const hb = z.hitBoxes().find(b => b.zone === 'torso');
+      G.input.mouse.x = G.gfx.cam.toScreenX(hb.x + hb.w / 2);
+      G.input.mouse.y = G.gfx.cam.toScreenY(hb.y + hb.h / 2);
+      return { sx: G.input.mouse.x, sy: G.input.mouse.y };
+    });
+    await page.mouse.move(target.sx * 2, target.sy * 2);
+    await page.mouse.down();
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: 'minigun_spin.png' });
+    await page.waitForTimeout(900);
+    await page.screenshot({ path: out });
+    await page.mouse.up();
+    const st = await page.evaluate(() => ({
+      weapon: G.game.player.current, spin: Math.round(G.game.player.spin * 100) / 100,
+      ammo: G.game.player.weapon().ammo, stats: G.game.stats, particles: G.particles.count()
+    }));
+    console.log('MINIGUN', JSON.stringify(st));
+    if (errors.length) console.log(errors.join(String.fromCharCode(10))); else console.log('NO PAGE ERRORS');
+    await browser.close();
+    return;
+  }
+
+  if (scenario === 'bomber') {
+    await page.evaluate(() => {
+      G.game.zombies.length = 0;
+      const z = new G.entities.Zombie('bomber', G.game.player.x + 34, false);
+      G.game.zombies.push(z);
+      const w = new G.entities.Zombie('walker', G.game.player.x + 260, false);
+      w.stagger = 999;
+      G.game.zombies.push(w);
+    });
+    await page.waitForTimeout(880);
+    await page.screenshot({ path: out });
+    const st = await page.evaluate(() => ({
+      hp: G.game.player.hp, dead: G.game.zombies.map(z => z.dead),
+      exploded: G.game.zombies.map(z => z.exploded), particles: G.particles.count()
+    }));
+    console.log('BOMBER', JSON.stringify(st));
+    if (errors.length) console.log(errors.join(String.fromCharCode(10))); else console.log('NO PAGE ERRORS');
     await browser.close();
     return;
   }

@@ -16,6 +16,11 @@ const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
   await page.waitForTimeout(400);
   await page.evaluate(() => {
     window.__sim = setInterval(() => {
+      if (G.game.state === 'upgrade') {
+        window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit1' }));
+        window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Digit1' }));
+        return;
+      }
       if (G.game.state !== 'playing') return;
       const wp = G.game.player.weapon();
       if (wp.ammo === 0 && !wp.reloading) wp.startReload();
@@ -37,6 +42,7 @@ const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
       wave: G.game.wave,
       state: G.game.state,
       score: G.game.score || 0,
+      levels: JSON.stringify(G.game.player ? {} : {}),
       fps: G.game.fps,
       hp: G.game.player ? G.game.player.hp : -1,
       alive: G.game.zombies ? G.game.zombies.filter(z => !z.dead).length : -1,

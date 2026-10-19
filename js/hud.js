@@ -44,7 +44,7 @@
     G.sprites.font(text, x, y, color, scale, align);
   }
 
-  function crosshair(ctx, m, hitMark, hitKill, spread) {
+  function crosshair(ctx, m, hitMark, hitKill, hitCrit, spread, spin) {
     var x = Math.round(m.x), y = Math.round(m.y);
     var g = Math.max(3, Math.round(spread || 5));
     ctx.fillStyle = 'rgba(232,227,208,0.88)';
@@ -54,8 +54,14 @@
     ctx.fillRect(x, y + g + 1, 1, 4);
     ctx.fillStyle = 'rgba(232,227,208,0.55)';
     ctx.fillRect(x, y, 1, 1);
+    if (spin > 0) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(x - 11, y + 10, 22, 4);
+      ctx.fillStyle = spin >= 0.999 ? '#ffc46b' : '#8f9d95';
+      ctx.fillRect(x - 10, y + 11, Math.round(20 * spin), 2);
+    }
     if (hitMark > 0) {
-      ctx.strokeStyle = hitKill ? '#ff5252' : '#fff6e0';
+      ctx.strokeStyle = hitKill ? '#ff5252' : hitCrit ? '#ffc46b' : '#fff6e0';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(x - 5, y - 5); ctx.lineTo(x - 2, y - 2);
@@ -128,9 +134,9 @@
     font(w.ammo + ' / ' + (w.reserve === Infinity ? '\u221e' : w.reserve), G.W - 6, G.H - 17,
       w.ammo === 0 ? '#d33a3a' : P.white, 1, 'right');
 
-    var slots = ['pistol', 'shotgun', 'smg'];
+    var slots = ['pistol', 'shotgun', 'smg', 'minigun'];
     for (var si = 0; si < slots.length; si++) {
-      var bx = G.W - 106 + si * 16;
+      var bx = G.W - 122 + si * 16;
       var active = slots[si] === p.current;
       ctx.fillStyle = active ? 'rgba(120,84,38,0.75)' : 'rgba(0,0,0,0.35)';
       ctx.fillRect(bx, G.H - 40, 12, 9);
@@ -148,6 +154,11 @@
     banner(ctx, s.bannerText, s.bannerT);
     if (s.waveState === 'breath' && s.bannerT <= 0) {
       font('NEXT WAVE ' + Math.ceil(s.breathT), G.W / 2, 44, '#c9c2a8', 1, 'center');
+    }
+    if (s.toastT > 0 && s.toastText) {
+      ctx.globalAlpha = Math.min(1, s.toastT);
+      G.cnfont.draw(ctx, s.toastText, G.W / 2, 112, '#ffc46b', 2, 'center');
+      ctx.globalAlpha = 1;
     }
   }
 
@@ -173,7 +184,7 @@
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.fillRect(92, 158, 296, 58);
     font('WASD MOVE    MOUSE AIM    LMB FIRE', G.W / 2, 166, '#9aa89f', 1, 'center');
-    font('R RELOAD    Q KICK    1-3 WEAPON', G.W / 2, 180, '#9aa89f', 1, 'center');
+    font('R RELOAD    Q KICK    1-4 WEAPON', G.W / 2, 180, '#9aa89f', 1, 'center');
     font('M MUTE     ESC PAUSE', G.W / 2, 194, '#9aa89f', 1, 'center');
 
     var blink = Math.floor(t * 2.2) % 2 === 0;
@@ -187,7 +198,7 @@
     font('PAUSED', G.W / 2, 88, '#e8e3d0', 4, 'center');
     font('ESC RESUME', G.W / 2, 132, '#ffc46b', 1, 'center');
     font('WASD MOVE   MOUSE AIM   LMB FIRE', G.W / 2, 156, '#8f9d95', 1, 'center');
-    font('R RELOAD   Q KICK   1-3 WEAPON   M MUTE', G.W / 2, 170, '#8f9d95', 1, 'center');
+    font('R RELOAD   Q KICK   1-4 WEAPON   M MUTE', G.W / 2, 170, '#8f9d95', 1, 'center');
   }
 
   function gameover(ctx, stats) {

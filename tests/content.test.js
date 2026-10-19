@@ -87,3 +87,72 @@ test('minigun and new zombies are configured', () => {
   assert.strictEqual(G.content.zombies.runner.damage, 9);
   assert.strictEqual(G.content.zombies.bomber.fuse, 0.7);
 });
+
+test('minigun has a large magazine and uses rate multiplier', () => {
+  const w = new G.entities.Weapon('minigun');
+  assert.strictEqual(w.ammo, 150);
+  assert.strictEqual(w.magSize, 150);
+  assert.strictEqual(w.def.rate, 0.03);
+});
+
+test('player spin reaches full and gates minigun fire', () => {
+  const p = new G.entities.Player(300);
+  p.current = 'minigun';
+  p.weapon().ammo = 150;
+  p.stepSpin(0.55, true);
+  assert.ok(Math.abs(p.spin - 1) < 1e-9);
+  assert.ok(p.fire() !== null);
+  p.stepSpin(0.5, false);
+  assert.ok(p.spin < 1);
+});
+
+test('player mods update weapon rate and magazine', () => {
+  const p = new G.entities.Player(300);
+  p.mods.fireRate = 0.5;
+  p.mods.mag = 0.2;
+  p.syncMods();
+  assert.ok(Math.abs(p.weapons.pistol.rateMult - 1.5) < 1e-9);
+  assert.strictEqual(p.weapons.pistol.magSize, 14);
+  assert.strictEqual(p.weapons.minigun.magSize, 180);
+});
+
+test('damage and crit mods flow into fire()', () => {
+  const p = new G.entities.Player(300);
+  p.mods.damage = 0.5;
+  p.syncMods();
+  p.mods.crit = 1;
+  const shot = p.fire();
+  assert.ok(Math.abs(shot.amount - 36) < 1e-9);
+  assert.strictEqual(shot.crit, true);
+});
+
+test('runner is much faster than a walker and bomber has blast radius', () => {
+  assert.ok(G.content.zombies.runner.speed > G.content.zombies.walker.speed * 2);
+  assert.strictEqual(G.content.zombies.bomber.bombRadius, 60);
+});
+
+test('minigun ammo pickup fills reserve', () => {
+  const p = new G.entities.Player(300);
+  p.weapons.minigun.reserve = 0;
+  G.entities.applyPickup(p, { kind: 'ammo_minigun', amount: 60 });
+  assert.strictEqual(p.weapons.minigun.reserve, 60);
+});
+
+test('pickup radius and ammo gains scale with mods', () => {
+  const p = new G.entities.Player(300);
+  p.mods.pickup = 1;
+  p.mods.ammo = 0.5;
+  p.syncMods();
+  p.weapons.minigun.reserve = 0;
+  const pk = new G.entities.Pickup('ammo_minigun', p.x + 25);
+  pk.update(0.1, p);
+  assert.strictEqual(pk.dead, true);
+  assert.strictEqual(p.weapons.minigun.reserve, 90);
+});
+
+test('minigun spin slows movement', () => {
+  const p = new G.entities.Player(300);
+  p.current = 'minigun';
+  p.spin = 1;
+  assert.ok(Math.abs(p.speedScale() - 0.65) < 1e-9);
+});
