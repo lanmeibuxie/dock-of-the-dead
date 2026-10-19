@@ -37,3 +37,24 @@ test('slowmo scales world time and expires', () => {
   G.time.update(0.01);
   assert.ok(Math.abs(G.time.worldDt - 0.01) < 1e-9);
 });
+
+require('../js/gfx.js');
+
+test('camera clamps to level bounds', () => {
+  const cam = G.gfx.cam;
+  cam.reset();
+  cam.follow(0, 100, 1, { minX: 0, maxX: 2400 });
+  assert.ok(cam.x >= 0);
+  cam.follow(2400, 100, 1, { minX: 0, maxX: 2400 });
+  assert.ok(cam.x <= 2400 - G.W);
+});
+
+test('camera shake decays to zero', () => {
+  const cam = G.gfx.cam;
+  cam.reset();
+  cam.shake(6);
+  assert.ok(cam.trauma > 0);
+  for (let i = 0; i < 120; i++) cam.update(0.016);
+  assert.strictEqual(cam.trauma, 0);
+  assert.strictEqual(cam.shakeX, 0);
+});
