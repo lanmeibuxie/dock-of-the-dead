@@ -364,8 +364,6 @@
     this.invuln = 0.6;
     this.hurtT = 0.3;
     this.vx += (dirX || 1) * 60;
-    this.weapon().reloading = false;
-    this.weapon().reloadT = 0;
     return true;
   };
 

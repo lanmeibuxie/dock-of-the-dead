@@ -58,3 +58,16 @@ test('reroll callback fires and clears selection', () => {
   assert.strictEqual(out.selected, -1);
   assert.strictEqual(rolled, 1);
 });
+
+test('taking damage does not interrupt reload', () => {
+  const p = new G.entities.Player(300);
+  p.hp = 100;
+  const w = p.weapons.pistol;
+  w.ammo = 3;
+  w.startReload();
+  const remain = w.reloadT;
+  p.takeDamage(10, 1);
+  assert.strictEqual(w.reloading, true);
+  assert.strictEqual(w.reloadT, remain);
+  assert.ok(p.hp < 100);
+});
