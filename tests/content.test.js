@@ -3,6 +3,7 @@ const assert = require('node:assert');
 require('../js/core.js');
 require('../js/sprites.js');
 require('../js/level.js');
+require('../js/zombieart.js');
 require('../js/player.js');
 require('../js/entities.js');
 const G = globalThis.G;
@@ -77,6 +78,13 @@ test('switch weapon changes fire interval and cancels reload', () => {
   assert.strictEqual(pl.current, 'shotgun');
   assert.strictEqual(sg.reloading, false);
   assert.strictEqual(pl.switchTo('shotgun'), false);
+});
+
+test('launcher, bird and jetpack are configured', () => {
+  assert.strictEqual(G.content.weapons.launcher.mag, 4);
+  assert.strictEqual(G.content.weapons.launcher.blastRadius, 58);
+  assert.strictEqual(G.content.birds.bird.hp, 18);
+  assert.strictEqual(G.JET.maxFuel, 100);
 });
 
 test('minigun and new zombies are configured', () => {
@@ -155,4 +163,18 @@ test('minigun spin slows movement', () => {
   p.current = 'minigun';
   p.spin = 1;
   assert.ok(Math.abs(p.speedScale() - 0.65) < 1e-9);
+});
+
+test('dock zombie rig parts are well formed', () => {
+  for (const type of ['walker', 'crawler', 'brute', 'runner', 'bomber']) {
+    const rig = G.zombieart.rig(type);
+    assert.ok(rig.parts.length >= 6);
+    assert.strictEqual(G.zombieart.rig(type), rig, 'rig cached');
+    for (const part of rig.parts) {
+      const w = part.art[0].length;
+      for (const row of part.art) assert.strictEqual(row.length, w, type + ' ' + part.name);
+      assert.ok(part.pivot[0] >= 0 && part.pivot[0] <= w);
+      assert.ok(part.pivot[1] >= 0 && part.pivot[1] <= part.art.length);
+    }
+  }
 });

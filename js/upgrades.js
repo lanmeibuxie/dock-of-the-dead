@@ -23,7 +23,14 @@
     { id: 'critEye', name: '死神之眼', desc: '暴击率 +15%，暴击伤害 +0.5 倍', rarity: 2, max: 3, icon: 'crit', stats: { crit: 0.15, critMult: 0.5 } },
     { id: 'bulletStorm', name: '弹幕风暴', desc: '射速 +15%，弹匣 +20%', rarity: 2, max: 3, icon: 'storm', stats: { fireRate: 0.15, mag: 0.20 } },
     { id: 'hunter', name: '尸潮猎手', desc: '伤害 +20%，换弹 +10%', rarity: 2, max: 3, icon: 'hunter', stats: { damage: 0.20, reload: 0.10 } },
-    { id: 'undying', name: '不灭意志', desc: '生命上限 +30，击杀回复 1', rarity: 2, max: 3, icon: 'undying', stats: { maxHp: 30, lifesteal: 1 } }
+    { id: 'undying', name: '不灭意志', desc: '生命上限 +30，击杀回复 1', rarity: 2, max: 3, icon: 'undying', stats: { maxHp: 30, lifesteal: 1 } },
+
+    { id: 'fuelTank', name: '燃料扩容', desc: '喷气燃料上限 +25%', rarity: 0, max: 6, icon: 'fuel', stats: { jetFuel: 0.25 } },
+    { id: 'jetNozzle', name: '强化喷嘴', desc: '喷气推力 +15%', rarity: 0, max: 5, icon: 'thruster', stats: { jetThrust: 0.15 } },
+    { id: 'jetRecharge', name: '快速回充', desc: '落地回充速度 +30%', rarity: 0, max: 5, icon: 'recharge', stats: { jetRegen: 0.30 } },
+    { id: 'airIntake', name: '空中回充', desc: '空中每秒回复 6 点燃料', rarity: 1, max: 2, icon: 'wings', stats: { jetAir: 6 } },
+    { id: 'blastArmor', name: '防爆护甲', desc: '爆炸自伤 -35%（最多 -70%）', rarity: 1, max: 3, icon: 'shield', stats: { blastResist: 0.35 } },
+    { id: 'jetTurbo', name: '涡轮增压', desc: '推力 +30%，燃料上限 +20%', rarity: 2, max: 2, icon: 'turbo', stats: { jetThrust: 0.30, jetFuel: 0.20 } }
   ];
 
   var RARITY = ['普通', '稀有', '史诗'];

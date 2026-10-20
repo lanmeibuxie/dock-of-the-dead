@@ -4,10 +4,6 @@
   var G = globalThis.G;
 
   var PP = { h: '#241f1d', s: '#c49a74', d: '#96704f', e: '#141414', j: '#37434f', c: '#4d5e6c', p: '#2b323a', b: '#191d21' };
-  var ZP = { z: '#7d8f6b', d: '#5c6b4c', t: '#464b3f', e: '#e6e0c8', b: '#38302a', r: '#6f1a22', w: '#c8c2a8' };
-  var BP = { z: '#6f7b63', d: '#4e5847', t: '#3a3c35', e: '#e6e0c8', b: '#2e2822', r: '#701c22', w: '#b8b294' };
-  var RP = { z: '#84929c', d: '#5e6a76', t: '#4a2a32', e: '#e8dcb8', b: '#262830', r: '#7a1a22', w: '#c8bca0' };
-  var BoP = { z: '#a8b06a', d: '#7d844e', t: '#5a5a33', e: '#f2e9b0', b: '#3a3327', r: '#8a1f1f', w: '#c8c090' };
   var GP = { m: '#3a4448', d: '#20282b', g: '#2a2420', w: '#6b4a2e' };
 
   function part(name, art, pal, pivot, scale) {
@@ -75,40 +71,6 @@
     '.ppp.', '.ppp.', 'bbbbb', 'bbbbb', 'bbbbb'
   ];
 
-  var zTorso = [
-    '..tttttttt..',
-    '.tttttttttt.',
-    '.ttzzzzzztt.',
-    '.tzzzrzzzzt.',
-    '.zzzzzzzzzz.',
-    '.zzrrzzzzzz.',
-    '.zzzzzzzzzz.',
-    '..zzzzzzzz..',
-    '..tttttttt..',
-    '..tttttttt..',
-    '..bbbbbbbb..',
-    '..bbbbbbbb..',
-    '..bbbbbbbb..'
-  ];
-  var zHead = [
-    '..zzzzzz..',
-    '.zzzzzzzz.',
-    '.zzzzzzzz.',
-    '.zzzzzzzz.',
-    '.zwezzzwz.',
-    '.zzzzzzzz.',
-    '..zdzdz...',
-    '..zzzzz...',
-    '...zzz....'
-  ];
-  var zArm = [
-    'tttt', 'tttt', 'ttt.', 'zzz.', 'zzz.', 'zzz.', 'zzz.', 'zz..', 'zz..', 'dd..'
-  ];
-  var zLeg = [
-    'bbbbb', 'bbbbb', 'bbbbb', 'bbbbb', 'bbbbb', 'bbbbb', 'bbbbb',
-    '.bbb.', '.bbb.', '.ddd.', 'ddddd'
-  ];
-
   var guns = {
     pistol: part('gun', [
       '............',
@@ -170,21 +132,6 @@
       part('head', playerHead, PP, [5, 10])
     ]
   });
-
-  function zombieRig(pal, scale) {
-    return buildRig({
-      legLen: 12 * scale, torsoH: 13 * scale, shoulderH: 11 * scale,
-      armLen: 12 * scale, headH: 9 * scale,
-      parts: [
-        part('legB', zLeg, pal, [2, 1], scale),
-        part('legF', zLeg, pal, [2, 1], scale),
-        part('armB', zArm, pal, [2, 1], scale),
-        part('torso', zTorso, pal, [6, 13], scale),
-        part('armF', zArm, pal, [2, 1], scale),
-        part('head', zHead, pal, [5, 9], scale)
-      ]
-    });
-  }
 
   function drawPivot(ctx, def, px, py, angle, arm) {
     var img = makePart(def);
@@ -293,10 +240,7 @@
     playerRig: playerRig,
     rigs: {},
     zombieRig: function (type) {
-      if (type === 'brute') return this.rigs.brute || (this.rigs.brute = zombieRig(BP, 2));
-      if (type === 'runner') return this.rigs.runner || (this.rigs.runner = zombieRig(RP, 1));
-      if (type === 'bomber') return this.rigs.bomber || (this.rigs.bomber = zombieRig(BoP, 1));
-      return this.rigs.walker || (this.rigs.walker = zombieRig(ZP, 1));
+      return G.zombieart.rig(type);
     },
     makePart: makePart,
     rot: function (img, deg) { return G.gfx.rotate(img, deg); },
@@ -312,6 +256,7 @@
       var hide = pose.hide || {};
       var byName = {};
       for (var i = 0; i < rig.parts.length; i++) byName[rig.parts[i].name] = rig.parts[i];
+      if (byName.tank && !hide.tank && !hide.torso) drawFlat(ctx, byName.tank, p.hipX - flip * 4, p.hipY - 1, flip);
       if (!hide.legB) drawPivot(ctx, byName.legB, p.hipX, p.hipY, pose.legB || 0);
       if (!hide.legF) drawPivot(ctx, byName.legF, p.hipX, p.hipY, pose.legF == null ? 0 : pose.legF);
       if (!hide.armB) drawPivot(ctx, byName.armB, p.shoulderX, p.shoulderY, (p.armB) - Math.PI / 2);

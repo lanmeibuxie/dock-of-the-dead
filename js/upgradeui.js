@@ -8,6 +8,7 @@
     { x: 174, y: 60, w: 132, h: 152 },
     { x: 322, y: 60, w: 132, h: 152 }
   ];
+  var CONFIRM_RECT = { x: 204, y: 234, w: 72, h: 20 };
   var RARITY_COLORS = ['#8f9d95', '#5ea9c9', '#d19a3c'];
   var RARITY_NAMES = ['普通', '稀有', '史诗'];
 
@@ -77,6 +78,25 @@
         r(3, 3, 3, 3, '#ffc46b'); r(7, 3, 3, 3, '#ffc46b'); r(2, 5, 9, 3, '#ffc46b');
         r(3, 8, 7, 2, '#ffc46b'); r(9, 8, 2, 2, '#c5202e');
         break;
+      case 'fuel':
+        r(3, 2, 6, 9, '#5a6260'); r(4, 3, 4, 6, '#e0b23a'); r(5, 1, 2, 2, '#8f9d95');
+        break;
+      case 'thruster':
+        r(4, 2, 4, 5, '#9aa8ac'); r(5, 7, 2, 2, '#ff9e3d'); r(5, 9, 2, 2, '#ffd166'); r(5, 11, 2, 1, '#fff2b0');
+        break;
+      case 'recharge':
+        r(3, 2, 6, 2, '#7fff9f'); r(8, 2, 2, 7, '#7fff9f'); r(3, 9, 7, 2, '#7fff9f'); r(6, 0, 1, 2, '#e0b23a');
+        break;
+      case 'wings':
+        r(1, 4, 4, 2, '#9aa8ac'); r(7, 4, 4, 2, '#9aa8ac'); r(4, 5, 4, 3, '#d8d4c4'); r(5, 8, 2, 2, '#d8d4c4');
+        break;
+      case 'shield':
+        r(3, 1, 6, 2, '#8f9d95'); r(2, 3, 8, 4, '#8f9d95'); r(3, 7, 6, 3, '#8f9d95'); r(5, 10, 2, 1, '#8f9d95');
+        break;
+      case 'turbo':
+        r(2, 6, 3, 2, '#ff9e3d'); r(5, 4, 3, 2, '#ffd166'); r(8, 2, 2, 2, '#fff2b0');
+        r(1, 9, 10, 2, '#ffc46b');
+        break;
       default:
         r(5, 2, 2, 6, '#e8e3d0'); r(5, 9, 2, 2, '#e8e3d0');
     }
@@ -125,11 +145,12 @@
       if (!card) continue;
       var r = CARD_RECTS[i];
       var hover = s.hover === i;
-      var y = r.y - (hover ? 2 : 0);
-      ctx.fillStyle = hover ? '#162126' : '#10181c';
+      var selected = s.selected === i;
+      var y = r.y - (hover || selected ? 2 : 0);
+      ctx.fillStyle = selected ? '#243018' : hover ? '#162126' : '#10181c';
       ctx.fillRect(r.x, y, r.w, r.h);
-      ctx.strokeStyle = RARITY_COLORS[card.rarity];
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = selected ? '#ffc46b' : RARITY_COLORS[card.rarity];
+      ctx.lineWidth = selected ? 3 : 2;
       ctx.strokeRect(r.x + 1, y + 1, r.w - 2, r.h - 2);
       ctx.fillStyle = 'rgba(255,255,255,0.04)';
       ctx.fillRect(r.x + 4, y + 4, r.w - 8, 2);
@@ -152,12 +173,44 @@
       ctx.strokeRect(r.x + 0.5, y + 0.5, r.w - 1, r.h - 1);
     }
 
-    G.cnfont.draw(ctx, '点击或按 1 / 2 / 3 选择', G.W / 2, 228, '#7d8a80', 1, 'center');
+    G.cnfont.draw(ctx, '点击选择 · 确定 / 双击卡牌', G.W / 2, 216, '#7d8a80', 1, 'center');
+    var on = s.selected >= 0;
+    ctx.fillStyle = on ? '#3a2a16' : '#161c1e';
+    ctx.fillRect(CONFIRM_RECT.x, CONFIRM_RECT.y, CONFIRM_RECT.w, CONFIRM_RECT.h);
+    ctx.strokeStyle = on ? '#ffc46b' : '#3a4442';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(CONFIRM_RECT.x + 1, CONFIRM_RECT.y + 1, CONFIRM_RECT.w - 2, CONFIRM_RECT.h - 2);
+    G.cnfont.draw(ctx, '确定', G.W / 2, CONFIRM_RECT.y + 4, on ? '#ffc46b' : '#5a6660', 1, 'center');
+    G.cnfont.draw(ctx, '1 / 2 / 3 选择   ENTER 确认', G.W / 2, 258, '#63706a', 1, 'center');
     cursor(ctx, s.mouse);
+  }
+
+  function input(cards, selected, mouse, clicked, pressed, confirmCb) {
+    var hover = -1;
+    for (var i = 0; i < CARD_RECTS.length; i++) {
+      var r = CARD_RECTS[i];
+      if (cards[i] && mouse.x >= r.x && mouse.x <= r.x + r.w && mouse.y >= r.y && mouse.y <= r.y + r.h) hover = i;
+    }
+    var cr = CONFIRM_RECT;
+    var onConfirm = mouse.x >= cr.x && mouse.x <= cr.x + cr.w && mouse.y >= cr.y && mouse.y <= cr.y + cr.h;
+    if (clicked) {
+      if (onConfirm && selected >= 0) confirmCb(selected);
+      else if (hover >= 0) {
+        if (selected === hover) confirmCb(hover);
+        else selected = hover;
+      }
+    }
+    if (pressed('Digit1') && cards[0]) selected = 0;
+    if (pressed('Digit2') && cards[1]) selected = 1;
+    if (pressed('Digit3') && cards[2]) selected = 2;
+    if (pressed('Enter') && selected >= 0) confirmCb(selected);
+    return { hover: hover, selected: selected };
   }
 
   G.upgradeui = {
     CARD_RECTS: CARD_RECTS,
+    CONFIRM_RECT: CONFIRM_RECT,
+    input: input,
     draw: draw,
     cursor: cursor
   };

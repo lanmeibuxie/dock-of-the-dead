@@ -6,6 +6,7 @@
   G.W = 480;
   G.H = 270;
   G.GRAVITY = 900;
+  G.JET = { maxFuel: 100, cost: 50, regen: 40, thrust: 600, ceiling: 56, airControl: 0.9 };
 
   G.clamp = function (v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; };
   G.lerp = function (a, b, t) { return a + (b - a) * t; };
@@ -25,7 +26,11 @@
       pistol: { id: 'pistol', name: 'PISTOL', damage: 24, rate: 0.22, mag: 12, reserve: Infinity, pellets: 1, spread: 0, reload: 1.0, knock: 70, recoil: 1, muzzle: 10 },
       shotgun: { id: 'shotgun', name: 'SHOTGUN', damage: 12, rate: 0.75, mag: 6, reserve: 36, pellets: 8, spread: 0.16, reload: 1.4, knock: 180, recoil: 3, muzzle: 14 },
       smg: { id: 'smg', name: 'SMG', damage: 14, rate: 0.075, mag: 30, reserve: 120, pellets: 1, spread: 0.09, reload: 1.25, knock: 55, recoil: 1.2, muzzle: 13 },
-      minigun: { id: 'minigun', name: 'MINIGUN', damage: 9, rate: 0.03, mag: 150, reserve: 150, pellets: 1, spread: 0.10, reload: 3.2, knock: 22, recoil: 0.35, muzzle: 26, spinUp: 0.55, spinDown: 0.5, moveSlow: 0.35 }
+      minigun: { id: 'minigun', name: 'MINIGUN', damage: 9, rate: 0.03, mag: 150, reserve: 150, pellets: 1, spread: 0.10, reload: 3.2, knock: 22, recoil: 0.35, muzzle: 26, spinUp: 0.55, spinDown: 0.5, moveSlow: 0.35 },
+      launcher: { id: 'launcher', name: 'LAUNCHER', damage: 60, rate: 0.9, mag: 4, reserve: 12, pellets: 1, spread: 0, reload: 2.4, knock: 80, recoil: 2, muzzle: 18, blastRadius: 58, blastEdge: 25, projectileSpeed: 420, projectileGravity: 600, fuse: 1.4 }
+    },
+    birds: {
+      bird: { id: 'bird', hp: 18, speed: 90, diveSpeed: 260, damage: 8, score: 12, radius: 9 }
     },
     zombies: {
       walker: { id: 'walker', hp: 60, speed: 34, damage: 12, reach: 20, attackRate: 1.15, windup: 0.35, width: 14, height: 38, score: 10 },
@@ -114,6 +119,9 @@
         self.mouse.y = (e.clientY - r.top) / r.height * G.H;
       });
       canvas.addEventListener('mousedown', function (e) {
+        var r = canvas.getBoundingClientRect();
+        self.mouse.x = (e.clientX - r.left) / r.width * G.W;
+        self.mouse.y = (e.clientY - r.top) / r.height * G.H;
         if (e.button === 0) { self.mouse.down = true; self.mouse.clicked = true; }
         e.preventDefault();
       });

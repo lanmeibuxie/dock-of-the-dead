@@ -223,11 +223,10 @@
     var sy = G.gfx.cam.toScreenY(this.y + this.yOff);
     if (this.type === 'bomber' && !this.dead) {
       var pulse = 0.5 + 0.5 * Math.sin((G.level.time || 0) * (this.state === 'fuse' ? 24 : 8));
-      var gl = ctx.createRadialGradient(sx, sy - 20, 2, sx, sy - 20, 30);
-      gl.addColorStop(0, 'rgba(150,220,90,' + (0.08 + 0.18 * pulse) + ')');
-      gl.addColorStop(1, 'rgba(90,170,60,0)');
-      ctx.fillStyle = gl;
-      ctx.fillRect(sx - 30, sy - 50, 60, 60);
+      ctx.fillStyle = 'rgba(150,220,90,' + (0.06 + 0.12 * pulse) + ')';
+      ctx.beginPath();
+      ctx.arc(sx, sy - 20, 14 + 6 * pulse, 0, Math.PI * 2);
+      ctx.fill();
     }
     var alpha = this.dead ? Math.max(0.55, 1 - this.deathT * 0.05) : 1;
     ctx.globalAlpha = alpha;
@@ -267,7 +266,7 @@
       player.hp = Math.min(player.maxHp, player.hp + (p.amount || 30));
       return true;
     }
-    var map = { ammo_pistol: 'pistol', ammo_shotgun: 'shotgun', ammo_smg: 'smg', ammo_minigun: 'minigun' };
+    var map = { ammo_pistol: 'pistol', ammo_shotgun: 'shotgun', ammo_smg: 'smg', ammo_minigun: 'minigun', ammo_launcher: 'launcher' };
     var w = player.weapons[map[p.kind]];
     if (!w) return false;
     if (w.reserve !== Infinity) w.reserve += Math.round((p.amount || 10) * (1 + (player.mods ? player.mods.ammo : 0)));
@@ -280,7 +279,7 @@
     this.y = (G.level.layout || G.level.build()).groundY;
     this.t = G.rand(0, 6);
     this.life = 22;
-    this.amount = kind === 'medkit' ? 30 : kind === 'ammo_shotgun' ? 6 : kind === 'ammo_smg' ? 24 : kind === 'ammo_minigun' ? 60 : 18;
+    this.amount = kind === 'medkit' ? 30 : kind === 'ammo_shotgun' ? 6 : kind === 'ammo_smg' ? 24 : kind === 'ammo_minigun' ? 60 : kind === 'ammo_launcher' ? 4 : 18;
     this.dead = false;
   }
 
@@ -318,7 +317,7 @@
       ctx.fillStyle = '#8f8a7a';
       ctx.fillRect(sx - 5, sy + 1, 10, 1);
     } else {
-      var col = this.kind === 'ammo_shotgun' ? '#8e3a2a' : this.kind === 'ammo_smg' ? '#a8862c' : this.kind === 'ammo_minigun' ? '#6a5a3a' : '#5a6260';
+      var col = this.kind === 'ammo_shotgun' ? '#8e3a2a' : this.kind === 'ammo_smg' ? '#a8862c' : this.kind === 'ammo_minigun' ? '#6a5a3a' : this.kind === 'ammo_launcher' ? '#4a5a2a' : '#5a6260';
       ctx.fillStyle = col;
       ctx.fillRect(sx - 5, sy - 5, 10, 7);
       ctx.fillStyle = 'rgba(255,255,255,0.18)';
@@ -341,7 +340,7 @@
     var vx = dir * G.rand(70, 190) + (kind === 'head' ? dir * 90 : 0);
     var vy = -G.rand(70, 190);
     list.push(new Limb(partDef(z, ref), x, y, vx, vy, G.rand(-2, 2), kind || 'limb'));
-    if (list.length > 40) list.shift();
+    if (list.length > 20) list.shift();
   }
 
   function Limb(def, x, y, vx, vy, angle, kind) {

@@ -9,10 +9,25 @@
     G.level.drawDeck(ctx, cam.x);
 
     if (s.state !== 'title') {
+      var minX = cam.x - 70, maxX = cam.x + G.W + 70;
       for (var pk = 0; pk < s.pickups.length; pk++) s.pickups[pk].draw(ctx);
-      for (var li = 0; li < s.limbs.length; li++) s.limbs[li].draw(ctx);
-      for (var z = 0; z < s.zombies.length; z++) s.zombies[z].draw(ctx);
+      for (var li = 0; li < s.limbs.length; li++) {
+        if (s.limbs[li].x >= minX && s.limbs[li].x <= maxX) s.limbs[li].draw(ctx);
+      }
+      for (var z = 0; z < s.zombies.length; z++) {
+        var zb = s.zombies[z];
+        if (zb.x >= minX && zb.x <= maxX) zb.draw(ctx);
+      }
+      if (s.birds) {
+        for (var bi = 0; bi < s.birds.length; bi++) {
+          var bd = s.birds[bi];
+          if (bd.x >= minX - 40 && bd.x <= maxX + 40) bd.draw(ctx);
+        }
+      }
       for (var i = 0; i < s.shots.length; i++) s.shots[i].draw(ctx);
+      if (s.grenades) {
+        for (var gi = 0; gi < s.grenades.length; gi++) s.grenades[gi].draw(ctx);
+      }
       if (s.state === 'dead') {
         G.sprites.drawRig(ctx, G.sprites.playerRig, {
           aim: s.player.aim, facing: s.player.facing, armF: s.player.aim, armB: s.player.aim + 0.2,
@@ -57,7 +72,7 @@
     if (s.state === 'upgrade') {
       G.upgradeui.draw(ctx, {
         cards: s.upgradeCards, levels: s.upgradeLevels, wave: s.waveNo,
-        hover: s.upgradeHover, mouse: s.mouse
+        hover: s.upgradeHover, selected: s.upgradeSelected, mouse: s.mouse
       });
     }
     if (s.state === 'paused') G.hud.pause(ctx);

@@ -75,16 +75,26 @@
       pistol: new Weapon('pistol'),
       shotgun: new Weapon('shotgun'),
       smg: new Weapon('smg'),
-      minigun: new Weapon('minigun')
+      minigun: new Weapon('minigun'),
+      launcher: new Weapon('launcher')
     };
-    this.order = ['pistol', 'shotgun', 'smg', 'minigun'];
+    this.order = ['pistol', 'shotgun', 'smg', 'minigun', 'launcher'];
     this.current = 'pistol';
     this.moving = false;
     this.spin = 0;
     this.mods = {
       damage: 0, fireRate: 0, reload: 0, mag: 0, speed: 0, crit: 0, critMult: 2,
-      pierce: 0, knock: 0, lifesteal: 0, pickup: 0, ammo: 0, recoil: 0
+      pierce: 0, knock: 0, lifesteal: 0, pickup: 0, ammo: 0, recoil: 0,
+      jetFuel: 0, jetThrust: 0, jetRegen: 0, jetAir: 0, blastResist: 0
     };
+    this.fuel = G.JET.maxFuel;
+    this.maxFuel = G.JET.maxFuel;
+    this.jetThrust = G.JET.thrust;
+    this.jetRegen = G.JET.regen;
+    this.jetAir = 0;
+    this.blastResist = 0;
+    this.thrusting = false;
+    this.wasThrusting = false;
     this.syncMods();
   }
 
@@ -103,6 +113,19 @@
     m.pickup = Math.min(3, m.pickup);
     m.ammo = Math.min(3, m.ammo);
     m.recoil = Math.max(-0.7, m.recoil);
+    m.jetFuel = Math.min(3, m.jetFuel);
+    m.jetThrust = Math.min(2, m.jetThrust);
+    m.jetRegen = Math.min(3, m.jetRegen);
+    m.jetAir = Math.min(30, m.jetAir);
+    m.blastResist = Math.min(0.7, m.blastResist);
+    var newMax = G.JET.maxFuel * (1 + m.jetFuel);
+    if (newMax > this.maxFuel) this.fuel = Math.min(newMax, this.fuel + (newMax - this.maxFuel));
+    this.maxFuel = newMax;
+    this.jetThrust = G.JET.thrust * (1 + m.jetThrust);
+    this.jetRegen = G.JET.regen * (1 + m.jetRegen);
+    this.jetAir = m.jetAir;
+    this.blastResist = m.blastResist;
+    this.fuel = Math.min(this.fuel, this.maxFuel);
     for (var i = 0; i < this.order.length; i++) {
       var w = this.weapons[this.order[i]];
       w.rateMult = 1 + m.fireRate;
@@ -174,7 +197,7 @@
 
     var move = (G.input.down('KeyD') || G.input.down('ArrowRight') ? 1 : 0) -
       (G.input.down('KeyA') || G.input.down('ArrowLeft') ? 1 : 0);
-    var target = move * 110 * this.speedScale();
+    var target = move * 110 * this.speedScale() * (this.onGround ? 1 : G.JET.airControl);
     var accel = this.onGround ? 1 - Math.pow(0.00005, dt) : 1 - Math.pow(0.03, dt);
     this.vx += (target - this.vx) * accel;
     if (Math.abs(this.vx) < 2 && move === 0) this.vx = 0;
@@ -186,6 +209,17 @@
       this.onGround = false;
     }
 
+    var holdThrust = (G.input.down('Space') || G.input.down('KeyW') || G.input.down('ArrowUp')) && !this.onGround;
+    this.thrusting = holdThrust && this.fuel > 0;
+    if (this.thrusting) {
+      this.vy -= (this.jetThrust + G.GRAVITY) * dt;
+      this.vy = Math.max(this.vy, -170);
+      this.fuel = Math.max(0, this.fuel - G.JET.cost * dt);
+      if (G.particles && Math.random() < 0.7) {
+        G.particles.spawnSparks(this.x - this.facing * 4, this.y - 12, -this.facing, 1);
+        G.particles.spawnSmoke(this.x - this.facing * 4, this.y - 8, 1);
+      }
+    }
     var prevY = this.y;
     this.vy = Math.min(this.vy + G.GRAVITY * dt, 620);
     this.x += this.vx * dt;
@@ -203,8 +237,8 @@
       }
     }
 
-    var sx = G.gfx.cam.toScreenX(this.x);
-    var sy = G.gfx.cam.toScreenY(this.y);
+    var sx = this.x - G.gfx.cam.x;
+    var sy = this.y - G.gfx.cam.y;
     var m = G.input.mouse;
     this.aim = Math.atan2(m.y - (sy - 23), m.x - sx);
     this.facing = Math.cos(this.aim) >= 0 ? 1 : -1;
@@ -213,11 +247,20 @@
     if (G.input.pressed('Digit2')) this.switchTo('shotgun');
     if (G.input.pressed('Digit3')) this.switchTo('smg');
     if (G.input.pressed('Digit4')) this.switchTo('minigun');
+    if (G.input.pressed('Digit5')) this.switchTo('launcher');
     if (G.input.mouse.wheel !== 0) {
       var idx = this.order.indexOf(this.current);
-      idx = (idx + (G.input.mouse.wheel > 0 ? 1 : -1) + 4) % 4;
+      idx = (idx + (G.input.mouse.wheel > 0 ? 1 : -1) + 5) % 5;
       this.switchTo(this.order[idx]);
     }
+
+    if (this.onGround) this.fuel = Math.min(this.maxFuel, this.fuel + this.jetRegen * dt);
+    else if (this.jetAir) this.fuel = Math.min(this.maxFuel, this.fuel + this.jetAir * dt);
+    if (this.thrusting !== this.wasThrusting) {
+      this.wasThrusting = this.thrusting;
+      if (G.audio) G.audio.jetpack(this.thrusting);
+    }
+    if (this.y < G.JET.ceiling) { this.y = G.JET.ceiling; if (this.vy < 0) this.vy = 0; }
 
     var w = this.weapon();
     w.update(dt);
@@ -253,6 +296,17 @@
     var pellets = def.pellets;
     var angles = [];
     var crits = [];
+    if (this.current === 'launcher') {
+      var gx = this.x + Math.cos(this.aim) * 10;
+      var gy = this.y - 23 + Math.sin(this.aim) * 10;
+      this.flash = 0.06;
+      this.recoil = Math.min(10, this.recoil + def.recoil * (1 + this.mods.recoil));
+      return {
+        weapon: 'launcher', grenade: true, x: gx, y: gy, angle: this.aim,
+        damage: def.damage * (1 + this.mods.damage), angles: [this.aim], crits: [false],
+        pierce: 0, knockScale: 1 + this.mods.knock
+      };
+    }
     if (pellets === 1) {
       angles.push(this.aim + G.rand(-def.spread, def.spread) * 0.5);
     } else {
@@ -299,8 +353,26 @@
     var sy = G.gfx.cam.toScreenY(this.y);
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.fillRect(Math.round(sx - 8), Math.round(sy - 2), 16, 3);
+    var bx = Math.round(sx - this.facing * 5);
+    ctx.fillStyle = '#2a3236';
+    ctx.fillRect(bx - 4, Math.round(sy - 33), 8, 14);
+    ctx.fillStyle = '#4a5a5e';
+    ctx.fillRect(bx - 4, Math.round(sy - 33), 2, 14);
+    ctx.fillStyle = '#c9a23a';
+    ctx.fillRect(bx + 1, Math.round(sy - 30), 3, 6);
+    ctx.fillStyle = '#7d5a1a';
+    ctx.fillRect(bx + 1, Math.round(sy - 30), 3, 1);
     var pose = this.pose();
     G.sprites.drawRig(ctx, G.sprites.playerRig, pose, sx, sy);
+    if (this.thrusting) {
+      var fl = 4 + Math.floor(Math.random() * 5);
+      ctx.fillStyle = '#ff9e3d';
+      ctx.fillRect(bx - 1, Math.round(sy - 20), 3, fl);
+      ctx.fillStyle = '#ffd166';
+      ctx.fillRect(bx, Math.round(sy - 20), 1, Math.max(2, fl - 1));
+      ctx.fillStyle = '#fff2b0';
+      ctx.fillRect(bx, Math.round(sy - 20), 1, 2);
+    }
     if (this.invuln > 0 && Math.floor(this.invuln * 20) % 2 === 0) {
       ctx.fillStyle = 'rgba(255,255,255,0.10)';
       ctx.fillRect(Math.round(sx - 9), Math.round(sy - 38), 18, 38);

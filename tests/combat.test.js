@@ -34,6 +34,13 @@ test('limb severs only when accumulated damage crosses 30', () => {
   assert.strictEqual(C.severApplied(25, 10), true);
 });
 
+test('blast self damage falls off and respects armor', () => {
+  assert.strictEqual(C.blastSelf(60, 0, 58, 0), 30);
+  assert.strictEqual(C.blastSelf(60, 58, 58, 0), 0);
+  assert.strictEqual(C.blastSelf(60, 0, 58, 0.35), 20);
+  assert.ok(C.blastSelf(60, 20, 58, 0) < 30);
+});
+
 test('segment vs box intersection', () => {
   const b = { x: 10, y: 10, w: 10, h: 10 };
   assert.ok(Math.abs(C.segBoxT(0, 15, 30, 15, b) - 1 / 3) < 1e-9);
@@ -43,5 +50,5 @@ test('segment vs box intersection', () => {
 
 test('minigun uses a shorter hitstop than the pistol', () => {
   assert.ok(C.hitstop('minigun', false) < C.hitstop('pistol', false));
-  assert.strictEqual(C.shake('minigun', false), 0.15);
+  assert.strictEqual(C.shake('minigun', false), 0.06);
 });

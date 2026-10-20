@@ -5,8 +5,8 @@ require('../js/waves.js');
 const W = globalThis.G.waves;
 
 test('budget grows by 3.5 per wave', () => {
-  assert.strictEqual(W.budget(1), 9.5);
-  assert.strictEqual(W.budget(5), 23.5);
+  assert.strictEqual(W.budget(1), 12);
+  assert.strictEqual(W.budget(5), 28);
 });
 
 test('compose never overspends and always spawns something', () => {
@@ -20,7 +20,21 @@ test('compose never overspends and always spawns something', () => {
 
 test('brutes appear from wave 2, never wave 1', () => {
   assert.ok(!W.compose(1, () => 0.99).includes('brute'));
-  assert.ok(W.compose(6, () => 0.7).includes('brute'));
+  assert.ok(W.compose(2, () => 0.99).includes('brute'));
+});
+
+test('horde caps and spawn pacing scale', () => {
+  assert.strictEqual(W.aliveCap(1), 22);
+  assert.strictEqual(W.aliveCap(20), 98);
+  assert.strictEqual(W.aliveCap(40), 120);
+  assert.ok(W.spawnInterval(1) > W.spawnInterval(20));
+  assert.strictEqual(W.spawnInterval(60), 0.12);
+  assert.strictEqual(W.spawnBatch(24), 3);
+});
+
+test('birds unlock at wave 4', () => {
+  assert.ok(!W.compose(3, () => 0.99).includes('bird'));
+  assert.ok(W.compose(4, () => 0.99).includes('bird'));
 });
 
 test('every 5th wave is elite and breath is 8s', () => {
@@ -40,5 +54,5 @@ test('runner unlocks at wave 3, bomber at wave 5', () => {
   assert.ok(!W.compose(2, () => 0.99).includes('runner'));
   assert.ok(W.compose(3, () => 0.99).includes('runner'));
   assert.ok(!W.compose(4, () => 0.99).includes('bomber'));
-  assert.ok(W.compose(5, () => 0.99).includes('bomber'));
+  assert.ok(W.compose(5, () => 0.85).includes('bomber'));
 });

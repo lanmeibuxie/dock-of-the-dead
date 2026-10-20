@@ -137,6 +137,21 @@
       }
     },
 
+    spawnFeather: function (x, y, dir, count) {
+      for (var i = 0; i < count; i++) {
+        var p = get();
+        if (!p) return;
+        p.kind = 'feather';
+        p.x = x; p.y = y;
+        p.vx = G.rand(-60, 60) + (dir || 0) * 30;
+        p.vy = G.rand(-70, 20);
+        p.size = 2;
+        p.color = G.pick(['#5d6b5d', '#8a9782', '#c8bca0']);
+        p.life = p.maxLife = G.rand(0.5, 1.2);
+        p.spin = G.rand(-12, 12);
+      }
+    },
+
     spawnSplash: function (x, y, count) {
       for (var i = 0; i < count; i++) {
         var p = get();
@@ -213,6 +228,10 @@
           }
         } else if (p.kind === 'splash') {
           if (p.y >= gy + 14) { release(p); continue; }
+        } else if (p.kind === 'feather') {
+          p.vy += 160 * dt;
+          p.vy *= 0.995;
+          if (p.y >= gy) { release(p); continue; }
         }
       }
     },
@@ -243,6 +262,8 @@
           ctx.fillRect(sx, sy, 1, 1);
         } else if (p.kind === 'splash') {
           ctx.fillRect(sx, sy, 1, 1);
+        } else if (p.kind === 'feather') {
+          ctx.fillRect(sx, sy, 2, 1);
         } else {
           ctx.fillRect(sx, sy, p.size, p.size);
         }

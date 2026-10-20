@@ -8,6 +8,8 @@
   var ambientT = 25;
   var heartT = 0;
   var ambientReady = false;
+  var jetSrc = null;
+  var jetGain = null;
 
   function makeNoise(seconds) {
     var len = Math.floor(ctx.sampleRate * seconds);
@@ -214,6 +216,26 @@
       if (!ctx) return;
       tone('sine', 660, 660, 0.07, 0.22);
       tone('sine', 990, 990, 0.09, 0.2, 0, 0.08);
+    },
+
+    jetpack: function (on) {
+      if (!ctx) return;
+      if (on && !jetSrc) {
+        jetSrc = ctx.createBufferSource();
+        jetSrc.buffer = noiseBuf;
+        jetSrc.loop = true;
+        var f = ctx.createBiquadFilter();
+        f.type = 'lowpass';
+        f.frequency.value = 900;
+        jetGain = ctx.createGain();
+        jetGain.gain.value = 0.10;
+        jetSrc.connect(f); f.connect(jetGain); jetGain.connect(master);
+        jetSrc.start();
+      } else if (!on && jetSrc) {
+        try { jetGain.gain.value = 0; jetSrc.stop(); } catch (e) { /* 已停止 */ }
+        jetSrc = null;
+        jetGain = null;
+      }
     },
 
     minigunSpin: function () {

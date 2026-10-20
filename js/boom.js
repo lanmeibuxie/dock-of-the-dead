@@ -1,4 +1,4 @@
-/* 码头尸潮 — 自爆种爆炸与连锁（由 game 提供上下文） */
+/* 码头尸潮 — 爆炸、自伤与连锁 */
 (function () {
   'use strict';
   var G = globalThis.G;
@@ -9,45 +9,73 @@
     booms.push({ z: z, t: 0.06 });
   }
 
+  function blastAt(bx, by, ctx, opt) {
+    var radius = opt.radius;
+    var damage = opt.damage;
+    var i;
+
+    if (opt.self !== false) {
+      var pd = G.dist(ctx.player.x, ctx.player.y - 20, bx, by);
+      var self = G.combat.blastSelf(damage, pd, radius, ctx.player.blastResist);
+      if (self > 0 && ctx.player.takeDamage(self, ctx.player.x < bx ? -1 : 1)) {
+        ctx.particles.spawnBlood(ctx.player.x, ctx.player.y - 22, ctx.player.x < bx ? -1 : 1, 10);
+        ctx.cam.shake(G.combat.hurtShake(self));
+      }
+    }
+
+    for (i = 0; i < ctx.zombies.length; i++) {
+      var z = ctx.zombies[i];
+      if (z.dead) continue;
+      var d = G.dist(z.x, z.y - 18, bx, by);
+      if (d > radius + 12) continue;
+      var dmg = Math.round(damage * (1 - 0.55 * Math.min(1, d / radius)));
+      var out = z.hit('torso', dmg, z.x < bx ? -1 : 1, 'explosion', null, 1.2);
+      if (out.killed) {
+        if (ctx.stats) ctx.stats.kills++;
+        if (ctx.addScore) ctx.addScore((z.def.score || 10) * (ctx.elite ? 2 : 1));
+        if (ctx.player.mods && ctx.player.mods.lifesteal) ctx.player.heal(ctx.player.mods.lifesteal);
+        if (z.type === 'bomber' && ctx.queueBoom) ctx.queueBoom(z);
+        ctx.particles.spawnBlood(z.x, z.y - 20, 1, 12);
+      }
+    }
+
+    if (ctx.birds) {
+      for (i = 0; i < ctx.birds.length; i++) {
+        var b = ctx.birds[i];
+        if (b.dead || G.dist(b.x, b.y, bx, by) > radius + 10) continue;
+        var bo = b.hit(Math.round(damage * 0.8), b.x < bx ? -1 : 1, 'explosion');
+        if (bo.killed) {
+          if (ctx.stats) ctx.stats.kills++;
+          if (ctx.addScore) ctx.addScore((b.def.score || 12) * (ctx.elite ? 2 : 1));
+          ctx.particles.spawnBlood(b.x, b.y, 1, 8);
+          if (ctx.particles.spawnFeather) ctx.particles.spawnFeather(b.x, b.y, 1, 5);
+        }
+      }
+    }
+
+    ctx.particles.spawnBlood(bx, by, 1, 22);
+    ctx.particles.spawnBlood(bx, by, -1, 22);
+    ctx.particles.spawnGib(bx, by, 1, 5);
+    ctx.particles.spawnGib(bx, by, -1, 5);
+    ctx.particles.spawnSmoke(bx, by, 8);
+    ctx.particles.spawnSparks(bx, by, 1, 8);
+    ctx.level.addBlood(bx, ctx.level.layout.groundY + G.rand(1, 8), 20, 1);
+    ctx.cam.shake(2.8);
+    ctx.time.hitstop(0.05);
+    if (ctx.audio) { ctx.audio.explosion(); ctx.audio.flesh(true); }
+  }
+
   function explode(z, ctx) {
     if (!z || z.exploded) return;
     z.exploded = true;
     z.dead = true;
     z.deathT = 0;
     z.hide = { torso: true, head: true, armF: true, armB: true, legF: true, legB: true };
-    var player = ctx.player, zombies = ctx.zombies;
-    var bx = z.x, by = z.y + z.yOff - 18;
-    var radius = z.def.bombRadius;
-    var dist = Math.abs(player.x - z.x);
-    var dir = z.x < player.x ? 1 : -1;
-
-    if (dist < radius && player.hp > 0) {
-      var dmg = Math.round(z.damage * (1 - dist / radius * 0.55));
-      if (player.takeDamage(dmg, dir)) {
-        ctx.particles.spawnBlood(player.x, player.y - 22, dir, 12);
-        ctx.cam.shake(G.combat.hurtShake(dmg) + 3);
-      }
-    }
-
-    for (var i = 0; i < zombies.length; i++) {
-      var o = zombies[i];
-      if (o === z || o.dead) continue;
-      if (Math.abs(o.x - bx) < z.def.chainRadius && Math.abs(o.y + o.yOff - z.y) < 60) {
-        var out = o.hit('torso', z.def.chainDamage, o.x < bx ? 1 : -1, 'explosion', null, 1.2);
-        if (out.killed && o.type === 'bomber') ctx.queueBoom(o);
-      }
-    }
-
-    ctx.particles.spawnBlood(bx, by, 1, 24);
-    ctx.particles.spawnBlood(bx, by, -1, 24);
-    ctx.particles.spawnGib(bx, by, 1, 6);
-    ctx.particles.spawnGib(bx, by, -1, 6);
-    ctx.particles.spawnSmoke(bx, by, 10);
-    ctx.particles.spawnSparks(bx, by, 1, 10);
-    ctx.level.addBlood(bx, ctx.level.layout.groundY + G.rand(1, 8), 22, dir);
-    ctx.cam.shake(7);
-    ctx.time.hitstop(0.05);
-    if (ctx.audio) { ctx.audio.explosion(); ctx.audio.flesh(true); }
+    blastAt(z.x, z.y + z.yOff - 18, ctx, {
+      radius: z.def.bombRadius,
+      damage: z.damage,
+      self: true
+    });
   }
 
   function update(booms, dt, ctx) {
@@ -60,5 +88,5 @@
     }
   }
 
-  G.boom = { queue: queue, explode: explode, update: update };
+  G.boom = { queue: queue, explode: explode, blastAt: blastAt, update: update };
 })();

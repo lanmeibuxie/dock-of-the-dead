@@ -26,14 +26,14 @@
       this.y += (desiredY - this.y) * smooth;
     },
     shake: function (mag) {
-      this.trauma = G.clamp(this.trauma + mag / 10, 0, 1);
+      this.trauma = G.clamp(this.trauma + mag / 16, 0, 0.55);
     },
     update: function (dt) {
       if (this.trauma > 0) {
-        var amp = this.trauma * this.trauma * 18;
+        var amp = this.trauma * this.trauma * 7;
         this.shakeX = (Math.random() * 2 - 1) * amp;
         this.shakeY = (Math.random() * 2 - 1) * amp * 0.6;
-        this.trauma = Math.max(0, this.trauma - dt * 2.2);
+        this.trauma = Math.max(0, this.trauma - dt * 3.2);
         if (this.trauma === 0) { this.shakeX = 0; this.shakeY = 0; }
       } else {
         this.shakeX = 0;

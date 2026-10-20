@@ -22,14 +22,18 @@
       return headshot ? base + 0.03 : base;
     },
     shake: function (weapon, headshot) {
-      var base = weapon === 'shotgun' ? 4 : weapon === 'smg' ? 1.2 : weapon === 'minigun' ? 0.15 : weapon === 'kick' ? 2 : 1.5;
-      return headshot ? base + 1.5 : base;
+      var base = weapon === 'shotgun' ? 1.6 : weapon === 'smg' ? 0.5 : weapon === 'minigun' ? 0.06 : weapon === 'kick' ? 1.0 : 0.7;
+      return headshot ? base + 0.7 : base;
     },
     hurtShake: function (damage) {
       return 1.5 + damage * 0.08;
     },
     severApplied: function (limbDamage, amount) {
       return limbDamage + amount >= SEVER;
+    },
+    blastSelf: function (damage, dist, radius, resist) {
+      if (dist >= radius) return 0;
+      return Math.round(damage * 0.5 * (1 - dist / radius) * (1 - G.clamp(resist || 0, 0, 0.7)));
     },
     segBoxT: function (x1, y1, x2, y2, b) {
       var dx = x2 - x1, dy = y2 - y1;

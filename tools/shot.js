@@ -14,7 +14,7 @@ const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
   page.on('pageerror', e => errors.push('PAGE: ' + e.message));
   await page.goto(url);
   await page.waitForTimeout(600);
-  if (scenario && !['title','elite','clickstart','upgradepick'].includes(scenario)) {
+  if (scenario && !['title','elite','clickstart','upgradepick','upgradedouble','upgradesel','pierce','perf'].includes(scenario)) {
     await page.keyboard.press('Enter');
     await page.waitForTimeout(320);
   }
@@ -115,13 +115,157 @@ const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
   if (scenario === 'upgradepick') {
     await page.waitForTimeout(300);
     await page.mouse.click(184, 270);
-    await page.waitForTimeout(250);
-    const st = await page.evaluate(() => ({
-      state: G.game.state, waveState: 'breath', toast: G.game.state,
-      levels: G.game.state, mods: G.game.player.mods.damage
-    }));
-    console.log('UPGRADEPICK', JSON.stringify(st));
+    await page.waitForTimeout(200);
+    const selected = await page.evaluate(() => G.game.state);
+    await page.mouse.click(480, 488);
+    await page.waitForTimeout(300);
+    const st = await page.evaluate(() => ({ state: G.game.state, mods: G.game.player.mods }));
+    console.log('UPGRADEPICK', JSON.stringify({ selected, after: st }));
     await page.screenshot({ path: out });
+    if (errors.length) console.log(errors.join(String.fromCharCode(10))); else console.log('NO PAGE ERRORS');
+    await browser.close();
+    return;
+  }
+
+  if (scenario === 'upgradedouble') {
+    await page.waitForTimeout(300);
+    const box = await page.evaluate(() => G.upgradeui.CARD_RECTS[0]);
+    await page.mouse.click((box.x + box.w / 2) * 2, (box.y + box.h / 2) * 2);
+    await page.waitForTimeout(120);
+    const selected = await page.evaluate(() => G.game.state);
+    await page.mouse.click((box.x + box.w / 2) * 2, (box.y + box.h / 2) * 2);
+    await page.waitForTimeout(250);
+    const after = await page.evaluate(() => G.game.state);
+    console.log('DOUBLE', JSON.stringify({ selected, after }));
+    await page.screenshot({ path: out });
+    if (errors.length) console.log(errors.join(String.fromCharCode(10))); else console.log('NO PAGE ERRORS');
+    await browser.close();
+    return;
+  }
+
+  if (scenario === 'pierce') {
+    await page.evaluate(() => {
+      G.game.player.mods.pierce = 8;
+      G.game.player.mods.crit = 0;
+      G.game.player.syncMods();
+      const zs = G.game.zombies.filter(z => !z.dead).slice(0, 10);
+      for (const z of zs) { z.x = G.game.player.x + 90; z.stagger = 999; }
+      const target = G.game.zombies.find(z => !z.dead);
+      const hb = target.hitBoxes().find(b => b.zone === 'head');
+      G.input.mouse.x = G.gfx.cam.toScreenX(hb.x + hb.w / 2);
+      G.input.mouse.y = G.gfx.cam.toScreenY(hb.y + hb.h / 2);
+      G.input.mouse.down = true;
+    });
+    await page.waitForTimeout(120);
+    await page.evaluate(() => { G.input.mouse.down = false; });
+    await page.waitForTimeout(120);
+    await page.screenshot({ path: out });
+    const st = await page.evaluate(() => ({ trauma: +G.gfx.cam.trauma.toFixed(3), alive: G.game.zombies.filter(z => !z.dead).length, shots: G.game.shots.length }));
+    console.log('PIERCE', JSON.stringify(st));
+    if (errors.length) console.log(errors.join(String.fromCharCode(10))); else console.log('NO PAGE ERRORS');
+    await browser.close();
+    return;
+  }
+
+  if (scenario === 'upgradesel') {
+    await page.waitForTimeout(300);
+    const box = await page.evaluate(() => G.upgradeui.CARD_RECTS[1]);
+    const cx = (box.x + box.w / 2) * 2, cy = (box.y + box.h / 2) * 2;
+    await page.mouse.move(cx, cy);
+    await page.waitForTimeout(150);
+    await page.mouse.click(cx, cy);
+    await page.waitForTimeout(250);
+    await page.screenshot({ path: out });
+    console.log('UPGRADESEL', JSON.stringify(await page.evaluate(() => G.game.upgradeState())));
+    if (errors.length) console.log(errors.join(String.fromCharCode(10))); else console.log('NO PAGE ERRORS');
+    await browser.close();
+    return;
+  }
+
+  if (scenario === 'perf') {
+    await page.waitForTimeout(1500);
+    const measured = await page.evaluate(() => new Promise(resolve => {
+      let frames = 0;
+      const t0 = performance.now();
+      function tick(t) {
+        frames++;
+        if (t - t0 < 2000) requestAnimationFrame(tick);
+        else resolve(frames / ((t - t0) / 1000));
+      }
+      requestAnimationFrame(tick);
+    }));
+    const st = await page.evaluate(() => ({
+      fps: Math.round(G.game.fps || 0),
+      measured: Math.round(performance.now()),
+      zombies: G.game.zombies.length,
+      alive: G.game.zombies.filter(z => !z.dead).length,
+      birds: G.game.birds.length,
+      particles: G.particles.count(),
+      lowFx: !!G.game.lowFx
+    }));
+    st.fps = Math.round(measured);
+    console.log('PERF', JSON.stringify(st));
+    await page.screenshot({ path: out });
+    if (errors.length) console.log(errors.join(String.fromCharCode(10))); else console.log('NO PAGE ERRORS');
+    await browser.close();
+    return;
+  }
+
+  if (scenario === 'launcher') {
+    await page.keyboard.press('Digit5');
+    await page.waitForTimeout(400);
+    await page.evaluate(() => {
+      G.game.zombies.length = 0;
+      G.game.birds.length = 0;
+      const keep = new G.entities.Zombie('walker', G.game.player.x + 330, false);
+      keep.stagger = 9999;
+      G.game.zombies.push(keep);
+      for (let i = 0; i < 3; i++) {
+        const z = new G.entities.Zombie('walker', G.game.player.x + 58 + i * 10, false);
+        z.stagger = 9999;
+        G.game.zombies.push(z);
+      }
+      G.game.player.hp = 100;
+      const gy = G.level.layout.groundY;
+      G.input.mouse.x = G.gfx.cam.toScreenX(G.game.player.x + 68);
+      G.input.mouse.y = G.gfx.cam.toScreenY(gy - 8);
+    });
+    await page.mouse.move(0, 0);
+    await page.evaluate(() => {
+      const gy = G.level.layout.groundY;
+      G.input.mouse.x = G.gfx.cam.toScreenX(G.game.player.x + 68);
+      G.input.mouse.y = G.gfx.cam.toScreenY(gy - 8);
+      G.input.mouse.down = true;
+    });
+    await page.waitForTimeout(80);
+    await page.evaluate(() => { G.input.mouse.down = false; });
+    await page.waitForTimeout(210);
+    await page.screenshot({ path: out });
+    const st = await page.evaluate(() => ({
+      hp: G.game.player.hp, ammo: G.game.player.weapon().ammo, state: G.game.state,
+      grenades: G.game.grenades.length, kills: G.game.stats.kills, particles: G.particles.count()
+    }));
+    console.log('LAUNCHER', JSON.stringify(st));
+    if (errors.length) console.log(errors.join(String.fromCharCode(10))); else console.log('NO PAGE ERRORS');
+    await browser.close();
+    return;
+  }
+
+  if (scenario === 'jet') {
+    await page.evaluate(() => {
+      G.game.zombies.length = 0;
+      G.game.birds.length = 0;
+      const keep = new G.entities.Zombie('walker', G.game.player.x + 330, false);
+      keep.stagger = 9999;
+      G.game.zombies.push(keep);
+      G.game.player.fuel = 100;
+    });
+    await page.keyboard.down('Space');
+    await page.waitForTimeout(700);
+    const st = await page.evaluate(() => ({ fuel: Math.round(G.game.player.fuel), y: Math.round(G.game.player.y), thrusting: G.game.player.thrusting }));
+    await page.screenshot({ path: out });
+    await page.keyboard.up('Space');
+    console.log('JET', JSON.stringify(st));
     if (errors.length) console.log(errors.join(String.fromCharCode(10))); else console.log('NO PAGE ERRORS');
     await browser.close();
     return;

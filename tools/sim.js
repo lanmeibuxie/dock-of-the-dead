@@ -19,6 +19,8 @@ const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
       if (G.game.state === 'upgrade') {
         window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit1' }));
         window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Digit1' }));
+        window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Enter' }));
+        window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Enter' }));
         return;
       }
       if (G.game.state !== 'playing') return;

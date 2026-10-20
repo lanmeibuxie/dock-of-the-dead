@@ -11,17 +11,18 @@
   var upgradeDebug = /[?&]debug=upgrade/.test(location.search);
   var god = /[?&]god=1/.test(location.search);
   var waveParam = /[?&]wave=(\d+)/.exec(location.search);
+  var hordeParam = /[?&]horde=(\d+)/.exec(location.search);
   var slowAcc = 0;
   var lowFx = false;
 
-  var state = 'title';
-  var titleT = 0;
-  var deadT = 0;
+  var state = 'title', titleT = 0, deadT = 0;
   var player = null;
   var shots = [];
   var zombies = [];
   var limbs = [];
   var booms = [];
+  var birds = [], grenades = [];
+  var frameNo = 0;
   var pickups = [];
   var waveNo = 0;
   var waveState = 'fight';
@@ -39,9 +40,9 @@
   var upgradeCards = [];
   var upgradeLevels = {};
   var upgradeHover = -1;
+  var upgradeSelected = -1;
   var toastText = '';
   var toastT = 0;
-  var volleyLock = 0;
   var stats = { kills: 0, headshots: 0, shots: 0, hits: 0 };
 
   function setState(s) {
@@ -60,6 +61,7 @@
     if (r < 0.4) return 'medkit';
     if (player.current === 'smg') return 'ammo_smg';
     if (player.current === 'minigun') return 'ammo_minigun';
+    if (player.current === 'launcher') return 'ammo_launcher';
     if (player.current === 'pistol') return G.chance(0.5) ? 'ammo_pistol' : 'ammo_shotgun';
     return 'ammo_shotgun';
   }
@@ -98,18 +100,36 @@
     waveNo = n;
     G.game.wave = n;
     elite = G.waves.isElite(n);
+    hitCtx.elite = elite;
     spawnQueue = G.waves.compose(n);
     spawned = 0;
     spawnTimer = 0.6;
     waveState = 'fight';
     bannerT = 2.2;
-    bannerText = elite ? 'ELITE WAVE ' + n : 'WAVE ' + n;
+    var day = Math.floor((n - 1) / 3) % 2 === 1;
+    var changed = G.level.setTheme(day);
+    if (changed) bannerText = day ? 'DAYBREAK' : 'NIGHTFALL';
+    else bannerText = elite ? 'ELITE WAVE ' + n : 'WAVE ' + n;
     if (G.audio) { if (elite) G.audio.thunder(); else G.audio.foghorn(); }
+    if (day) {
+      for (var eb = 0; eb < Math.max(1, Math.floor(n / 3)); eb++) spawnQueue.push('bird');
+    }
+    hitCtx.elite = elite;
+    boomCtx.elite = elite;
+  }
+
+  function spawnBird() {
+    if (birds.length >= 15) return;
+    var L = G.level.layout;
+    var sc = G.waves.scale(waveNo);
+    var x = G.clamp(player.x + (G.chance(0.5) ? 1 : -1) * G.rand(170, 320), 20, L.length - 20);
+    birds.push(new G.birds.Bird(x, G.rand(50, 115), sc.damage));
   }
 
   function spawnOne() {
     var type = spawnQueue.shift();
     if (!type) return;
+    if (type === 'bird') { spawnBird(); spawned++; return; }
     var L = G.level.layout;
     var side = spawned % 2 === 0 ? 1 : -1;
     var water = spawned % 3 === 2;
@@ -144,13 +164,21 @@
     if (state !== 'playing') return;
     var fired = player.fire();
     if (!fired) return;
+    if (fired.grenade) {
+      grenades.push(new G.grenade.Grenade(fired.x, fired.y, fired.angle, fired.damage));
+      stats.shots++;
+      G.gfx.cam.shake(0.5);
+      if (G.audio) { G.audio.shot('launcher'); G.audio.shell(); }
+      player.flash = 0.08;
+      return;
+    }
     for (var i = 0; i < fired.angles.length; i++) {
       shots.push(new G.entities.Shot(fired.x, fired.y, fired.angles[i], fired.damage, fired.weapon, fired.knock, {
         crit: fired.crits[i], pierce: fired.pierce, knockScale: fired.knockScale
       }));
     }
     stats.shots += fired.angles.length;
-    G.gfx.cam.shake(fired.weapon === 'shotgun' ? 2.6 : fired.weapon === 'smg' ? 0.8 : 1.1);
+    G.gfx.cam.shake(fired.weapon === 'shotgun' ? 1.2 : fired.weapon === 'smg' ? 0.4 : fired.weapon === 'minigun' ? 0.2 : 0.5);
     if (G.audio) { G.audio.shot(fired.weapon); G.audio.shell(); }
     var pp = player.points();
     G.particles.spawnShell(pp.handX, pp.handY - 2, player.facing);
@@ -158,59 +186,21 @@
     if (fired.weapon === 'shotgun') G.particles.spawnSmoke(pp.muzzleX, pp.muzzleY, 4);
   }
 
-  function applyHit(z, box, shot) {
-    var dir = Math.cos(shot.angle) >= 0 ? 1 : -1;
-    var res = G.combat.resolve({ damage: shot.damage * (shot.crit ? player.mods.critMult : 1), zone: box.zone });
-    var hx = shot.x, hy = shot.y;
-    var out = z.hit(box.zone, res.amount, dir, shot.weapon, box.ref, shot.knockScale);
-    var gy = G.level.layout.groundY;
-
-    if (volleyLock <= 0) {
-      G.time.hitstop(G.combat.hitstop(shot.weapon, res.headshot));
-      volleyLock = 0.07;
-    }
-    G.gfx.cam.shake(G.combat.shake(shot.weapon, res.headshot));
-    if (G.audio) G.audio.flesh(res.headshot, G.clamp((z.x - player.x) / 220, -1, 1));
-    hitMark = 0.1;
-    hitKill = out.killed;
-    hitCrit = !!shot.crit;
-    if (shot.crit) {
-      G.particles.spawnSparks(hx, hy, dir, 5);
-      G.gfx.cam.shake(1.2);
-    }
-
-    G.particles.spawnBlood(hx, hy, dir, res.headshot ? 34 : 14);
-    G.level.addBlood(hx, gy + G.rand(1, 8), res.headshot ? 9 : 5, dir);
-    if (res.headshot) G.particles.spawnBone(hx, hy, dir, 7);
-
-    stats.hits++;
-    if (res.headshot) stats.headshots++;
-
-    if (out.severed) {
-      G.entities.spawnLimb(limbs, z, box.ref, hx, hy, dir, 'limb');
-      G.particles.spawnBlood(hx, hy, dir, 18);
-    }
-    if (out.killed) {
-      stats.kills++;
-      if (player.mods.lifesteal) player.heal(player.mods.lifesteal);
-      score += (z.def.score || 10) * (elite ? 2 : 1);
-      if (G.chance(0.06)) spawnLoot(z.x);
-      if (res.headshot) {
-        z.hide.head = true;
-        G.entities.spawnLimb(limbs, z, 'head', hx, hy, dir, 'head');
-        G.particles.spawnBlood(hx, hy, dir, 46);
-        G.particles.spawnBone(hx, hy, dir, 12);
-        G.time.slowmo(0.32, 0.35);
-        G.gfx.cam.shake(4);
-      } else {
-        G.particles.spawnGib(hx, hy, dir, 4);
-        G.particles.spawnBlood(hx, hy, dir, 26);
-        G.level.addBlood(hx, gy + G.rand(1, 8), 12, dir);
-      }
-    }
-  }
-
   function queueBoom(z) { G.boom.queue(booms, z); }
+
+  var hitCtx = {
+    player: null, zombies: zombies, birds: birds, particles: G.particles, level: G.level,
+    limbs: limbs, cam: G.gfx.cam, time: G.time, audio: G.audio, stats: null, elite: false,
+    onHit: function (kill, crit) { hitMark = 0.1; hitKill = kill; hitCrit = crit; },
+    addScore: function (n) { score += n; },
+    spawnLoot: spawnLoot, queueBoom: queueBoom
+  };
+
+  var boomCtx = {
+    player: null, zombies: zombies, birds: birds, particles: G.particles, cam: G.gfx.cam,
+    time: G.time, level: G.level, audio: G.audio, stats: null, elite: false,
+    addScore: function (n) { score += n; }, queueBoom: queueBoom
+  };
 
   function explodeBomber(z) {
     G.boom.explode(z, {
@@ -219,37 +209,25 @@
     });
   }
 
-  function resolveShot(shot) {
-    var best = null;
-    for (var i = 0; i < zombies.length; i++) {
-      var z = zombies[i];
-      if (z.dead || shot.hitList.indexOf(z) >= 0) continue;
-      var boxes = z.hitBoxes();
-      for (var b = 0; b < boxes.length; b++) {
-        var t = G.combat.segBoxT(shot.px, shot.py, shot.x, shot.y, boxes[b]);
-        if (t != null && (!best || t < best.t)) best = { z: z, box: boxes[b], t: t };
-      }
-    }
-    if (!best) return;
-    shot.x = shot.px + (shot.x - shot.px) * best.t;
-    shot.y = shot.py + (shot.y - shot.py) * best.t;
-    shot.hitList.push(best.z);
-    if (shot.pierce > 0) shot.pierce--;
-    else shot.dead = true;
-    applyHit(best.z, best.box, shot);
-  }
-
   function updateWaves(dt) {
     if (waveState === 'fight') {
       if (spawnQueue.length) {
         spawnTimer -= dt;
         if (spawnTimer <= 0) {
-          spawnOne();
-          spawnTimer = 0.42;
+          var aliveCount = 0;
+          for (var ac = 0; ac < zombies.length; ac++) if (!zombies[ac].dead) aliveCount++;
+          var cap = G.waves.aliveCap(waveNo);
+          var batch = G.waves.spawnBatch(waveNo);
+          for (var sb = 0; sb < batch && spawnQueue.length && aliveCount < cap; sb++) {
+            spawnOne();
+            aliveCount++;
+          }
+          spawnTimer = G.waves.spawnInterval(waveNo);
         }
       } else {
         var alive = false;
         for (var i = 0; i < zombies.length; i++) if (!zombies[i].dead) { alive = true; break; }
+        if (!alive) for (var ba = 0; ba < birds.length; ba++) if (!birds[ba].dead) { alive = true; break; }
         if (!alive && booms.length === 0) openUpgrade();
       }
     } else {
@@ -266,8 +244,8 @@
     player.hp = 0;
     G.time.slowmo(0.9, 0.3);
     G.particles.spawnBlood(player.x, player.y - 22, player.facing, 30);
-    G.gfx.cam.shake(5);
-    if (G.audio) G.audio.thunder();
+    G.gfx.cam.shake(2.5);
+    if (G.audio) { G.audio.jetpack(false); G.audio.thunder(); }
   }
 
   function updateWorld(dt, realDt) {
@@ -281,28 +259,50 @@
 
     for (var s = shots.length - 1; s >= 0; s--) {
       shots[s].update(dt);
-      if (!shots[s].dead) resolveShot(shots[s]);
+      if (!shots[s].dead) G.hits.resolve(shots[s], hitCtx);
       if (shots[s].dead) shots.splice(s, 1);
     }
-    G.boom.update(booms, dt, {
-      player: player, zombies: zombies, particles: G.particles, cam: G.gfx.cam,
-      time: G.time, level: G.level, audio: G.audio, queueBoom: queueBoom
-    });
+    G.boom.update(booms, dt, boomCtx);
+    for (var g = grenades.length - 1; g >= 0; g--) {
+      var gr = grenades[g];
+      if (gr.update(dt) || gr.hits(zombies, birds)) {
+        G.boom.blastAt(gr.x, gr.y, boomCtx, { radius: gr.radius, damage: gr.damage, self: true });
+        grenades.splice(g, 1);
+      }
+    }
+    for (var bd = birds.length - 1; bd >= 0; bd--) {
+      birds[bd].update(dt, player);
+      if (birds[bd].dead && birds[bd].deathT > 15) birds.splice(bd, 1);
+    }
+    frameNo++;
     for (var z = zombies.length - 1; z >= 0; z--) {
-      zombies[z].update(dt, player);
-      if (zombies[z].dead && zombies[z].deathT > 22) zombies.splice(z, 1);
+      var zz = zombies[z];
+      var far = Math.abs(zz.x - player.x) > G.W * 0.45;
+      if (!far || (frameNo + z) % 4 === 0) zz.update(far ? dt * 4 : dt, player);
+      if (zz.dead && zz.deathT > 22) zombies.splice(z, 1);
     }
     for (var zc = 0; zc < zombies.length; zc++) zombies[zc].x = G.clamp(zombies[zc].x, 20, G.level.layout.length - 20);
+    zombies.sort(function (a, b) { return a.x - b.x; });
     for (var a = 0; a < zombies.length; a++) {
       if (zombies[a].dead) continue;
       for (var b = a + 1; b < zombies.length; b++) {
-        if (zombies[b].dead) continue;
         var sep = zombies[b].x - zombies[a].x;
-        if (Math.abs(sep) < 12 && Math.abs(zombies[a].yOff - zombies[b].yOff) < 8) {
-          var push = (12 - Math.abs(sep)) * 0.5 * (sep >= 0 ? 1 : -1);
-          zombies[a].x -= push;
-          zombies[b].x += push;
-        }
+        if (sep >= 12) break;
+        if (zombies[b].dead || Math.abs(zombies[a].yOff - zombies[b].yOff) >= 8) continue;
+        var push = (12 - Math.abs(sep)) * 0.5 * (sep >= 0 ? 1 : -1);
+        zombies[a].x -= push;
+        zombies[b].x += push;
+      }
+    }
+    var deadCount = 0;
+    for (var dc = 0; dc < zombies.length; dc++) if (zombies[dc].dead) deadCount++;
+    if (deadCount > 30) {
+      var old = [];
+      for (var d2 = 0; d2 < zombies.length; d2++) if (zombies[d2].dead) old.push(zombies[d2]);
+      old.sort(function (a, b) { return b.deathT - a.deathT; });
+      for (var d3 = 30; d3 < old.length; d3++) {
+        var idx = zombies.indexOf(old[d3]);
+        if (idx >= 0) zombies.splice(idx, 1);
       }
     }
     for (var li = limbs.length - 1; li >= 0; li--) {
@@ -315,8 +315,8 @@
     }
     toastT = Math.max(0, toastT - realDt);
     G.particles.update(realDt);
+    G.hits.update(realDt);
     hitMark = Math.max(0, hitMark - realDt);
-    volleyLock = Math.max(0, volleyLock - realDt);
     updateWaves(dt);
     if (player.hp <= 0) die();
     bannerT = Math.max(0, bannerT - dt);
@@ -327,10 +327,11 @@
     G.render.drawWorld(ctx, {
       state: state, player: player, zombies: zombies, shots: shots, limbs: limbs,
       pickups: pickups, cam: G.gfx.cam, particles: G.particles, debug: debug,
+      birds: birds, grenades: grenades,
       titleT: titleT, deadT: deadT, stats: stats, waveNo: waveNo, elite: elite, score: score,
       waveState: waveState, breathT: breathT, bannerText: bannerText, bannerT: bannerT,
       hitMark: hitMark, hitKill: hitKill, hitCrit: hitCrit, toastText: toastText, toastT: toastT,
-      upgradeCards: upgradeCards, upgradeLevels: upgradeLevels, upgradeHover: upgradeHover,
+      upgradeCards: upgradeCards, upgradeLevels: upgradeLevels, upgradeHover: upgradeHover, upgradeSelected: upgradeSelected,
       mouse: G.input.mouse, muted: G.audio ? G.audio.muted : false
     });
   }
@@ -347,17 +348,21 @@
     score = 0;
     hitMark = 0;
     hitKill = false;
-    volleyLock = 0;
     stats = { kills: 0, headshots: 0, shots: 0, hits: 0 };
     G.game.stats = stats;
+    hitCtx.stats = stats;
+    boomCtx.stats = stats;
     shots.length = 0;
     zombies.length = 0;
     limbs.length = 0;
     pickups.length = 0;
     booms.length = 0;
+    birds.length = 0;
+    grenades.length = 0;
     upgradeCards = [];
     upgradeLevels = {};
     upgradeHover = -1;
+    upgradeSelected = -1;
     toastText = '';
     toastT = 0;
     G.time.reset();
@@ -366,6 +371,8 @@
     if (G.particles) G.particles.clear();
     player = new G.entities.Player(300);
     G.game.player = player;
+    hitCtx.player = player;
+    boomCtx.player = player;
     G.input.mouse.down = false;
     G.input.mouse.clicked = false;
     startWave(startWaveAt || 1);
@@ -401,17 +408,10 @@
       G.gfx.cam.update(dt);
       G.level.update(dt, G.gfx.cam.x);
       G.particles.update(dt);
-      var rects = G.upgradeui.CARD_RECTS;
-      upgradeHover = -1;
-      for (var ui = 0; ui < rects.length; ui++) {
-        var ur = rects[ui];
-        if (G.input.mouse.x >= ur.x && G.input.mouse.x <= ur.x + ur.w &&
-            G.input.mouse.y >= ur.y && G.input.mouse.y <= ur.y + ur.h) upgradeHover = ui;
-      }
-      if (G.input.mouse.clicked && upgradeHover >= 0) pickUpgrade(upgradeHover);
-      if (G.input.pressed('Digit1')) pickUpgrade(0);
-      if (G.input.pressed('Digit2')) pickUpgrade(1);
-      if (G.input.pressed('Digit3')) pickUpgrade(2);
+      var ui = G.upgradeui.input(upgradeCards, upgradeSelected, G.input.mouse,
+        G.input.mouse.clicked, G.input.pressed.bind(G.input), function (i) { pickUpgrade(i); });
+      upgradeHover = ui.hover;
+      upgradeSelected = ui.selected;
     } else if (state === 'dead') {
       deadT += dt;
       G.gfx.cam.update(dt);
@@ -445,8 +445,8 @@
   }
 
   G.game = G.game || {};
-  G.game.state = 'title';
-  G.game.debug = debug;
+  G.game.state = 'title'; G.game.debug = debug;
+  G.game.upgradeState = function () { return { state: state, selected: upgradeSelected, hover: upgradeHover, cards: upgradeCards.length }; };
   G.game.queueBoom = queueBoom; G.game.explodeBomber = explodeBomber;
   G.game.god = god;
   G.game.lowFx = false;
@@ -461,8 +461,8 @@
     var unlock = function () { if (G.audio) G.audio.init(); };
     window.addEventListener('pointerdown', unlock);
     window.addEventListener('keydown', unlock);
-    G.game.zombies = zombies; G.game.shots = shots;
-    G.game.limbs = limbs; G.game.pickups = pickups;
+    G.game.zombies = zombies; G.game.shots = shots; G.game.limbs = limbs; G.game.pickups = pickups;
+    G.game.birds = birds; G.game.grenades = grenades;
     document.addEventListener('visibilitychange', function () {
       if (document.hidden && state === 'playing') setState('paused');
     });
@@ -480,8 +480,9 @@
       openUpgrade();
     }
     if (hordeDebug) {
-      resetGame();
-      G.debug.horde(zombies, player);
+      if (!waveParam) resetGame();
+      G.debug.horde(zombies, player, hordeParam ? parseInt(hordeParam[1], 10) : 0);
+      for (var hb = 0; hb < 5; hb++) spawnBird();
       spawnQueue = [];
       bannerT = 0;
     }

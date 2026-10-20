@@ -129,14 +129,23 @@
     ctx.fillRect(8, G.H - 17, hpw, 1);
     font('HP', 9, G.H - 27, '#a8b0a0', 1);
 
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillRect(7, G.H - 8, 86, 5);
+    ctx.fillStyle = '#2a2416';
+    ctx.fillRect(8, G.H - 7, 84, 3);
+    var fuelW = Math.max(0, Math.round(84 * p.fuel / p.maxFuel));
+    ctx.fillStyle = p.fuel < p.maxFuel * 0.25 ? '#d33a3a' : '#e0b23a';
+    ctx.fillRect(8, G.H - 7, fuelW, 3);
+    font('JET', 95, G.H - 8, '#a8b0a0', 1);
+
     var w = p.weapon();
     font(w.def.name, G.W - 6, G.H - 27, '#a8b0a0', 1, 'right');
     font(w.ammo + ' / ' + (w.reserve === Infinity ? '\u221e' : w.reserve), G.W - 6, G.H - 17,
       w.ammo === 0 ? '#d33a3a' : P.white, 1, 'right');
 
-    var slots = ['pistol', 'shotgun', 'smg', 'minigun'];
+    var slots = ['pistol', 'shotgun', 'smg', 'minigun', 'launcher'];
     for (var si = 0; si < slots.length; si++) {
-      var bx = G.W - 122 + si * 16;
+      var bx = G.W - 138 + si * 16;
       var active = slots[si] === p.current;
       ctx.fillStyle = active ? 'rgba(120,84,38,0.75)' : 'rgba(0,0,0,0.35)';
       ctx.fillRect(bx, G.H - 40, 12, 9);
@@ -184,7 +193,7 @@
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.fillRect(92, 158, 296, 58);
     font('WASD MOVE    MOUSE AIM    LMB FIRE', G.W / 2, 166, '#9aa89f', 1, 'center');
-    font('R RELOAD    Q KICK    1-4 WEAPON', G.W / 2, 180, '#9aa89f', 1, 'center');
+    font('R RELOAD    Q KICK    1-5 WEAPON', G.W / 2, 180, '#9aa89f', 1, 'center');
     font('M MUTE     ESC PAUSE', G.W / 2, 194, '#9aa89f', 1, 'center');
 
     var blink = Math.floor(t * 2.2) % 2 === 0;
@@ -198,7 +207,7 @@
     font('PAUSED', G.W / 2, 88, '#e8e3d0', 4, 'center');
     font('ESC RESUME', G.W / 2, 132, '#ffc46b', 1, 'center');
     font('WASD MOVE   MOUSE AIM   LMB FIRE', G.W / 2, 156, '#8f9d95', 1, 'center');
-    font('R RELOAD   Q KICK   1-4 WEAPON   M MUTE', G.W / 2, 170, '#8f9d95', 1, 'center');
+    font('R RELOAD   Q KICK   1-5 WEAPON   M MUTE', G.W / 2, 170, '#8f9d95', 1, 'center');
   }
 
   function gameover(ctx, stats) {
