@@ -158,6 +158,12 @@
       var bm = this.modifier && this.modifier.id === 'bloodMoon' ? 1.2 : 1;
       z.damage *= sc.damage * bm;
       z.speed *= sc.speed * bm;
+      if (this.waveNo >= 6 && G.chance(0.12)) {
+        z.affix = G.pick(['armored', 'swift', 'explosive']);
+        if (z.affix === 'armored') { z.maxHp = Math.round(z.maxHp * 1.6); z.hp = z.maxHp; z.speed *= 0.8; z.damage *= 1.1; }
+        else if (z.affix === 'swift') { z.maxHp = Math.round(z.maxHp * 0.8); z.hp = z.maxHp; z.speed *= 1.6; }
+        else { z.maxHp = Math.round(z.maxHp * 1.1); z.hp = z.maxHp; }
+      }
       G.game.zombies.push(z);
       this.spawned++;
       if (G.audio && G.chance(0.4)) G.audio.groan(G.clamp((x - player.x) / 220, -1, 1));
@@ -195,6 +201,7 @@
     },
 
     openUpgrade: function () {
+      if (G.game && G.game.addGold) G.game.addGold(5 + this.waveNo);
       this.cards = G.upgrades.roll(this.waveNo, Math.random, this.levels);
       if (this.bossWave) {
         var used = {};
@@ -225,9 +232,7 @@
       if (!card) return;
       if (!G.upgrades.apply(G.game.player, card, this.levels)) return;
       this.cards = [];
-      G.game.setState('playing');
-      this.waveState = 'breath';
-      this.breathT = 4;
+      this.waveState = 'shop';
       this.toastText = '获得：' + card.name;
       this.toastT = 1.8;
       if (G.game.player.setToast) {
@@ -235,6 +240,7 @@
         G.game.player.setToast = '';
       }
       if (G.audio) G.audio.pickup();
+      G.game.openShop();
     },
 
     reroll: function () {

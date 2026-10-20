@@ -241,6 +241,7 @@
     REROLL_RECT: REROLL_RECT,
     input: input,
     draw: draw,
-    cursor: cursor
+    cursor: cursor,
+    icon: icon
   };
 })();

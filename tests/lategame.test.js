@@ -71,3 +71,15 @@ test('taking damage does not interrupt reload', () => {
   assert.strictEqual(w.reloadT, remain);
   assert.ok(p.hp < 100);
 });
+
+test('shop rolls distinct items and applies armor', () => {
+  require('../js/shop.js');
+  const items = G.shop.roll(4, () => 0.3);
+  assert.strictEqual(items.length, 4);
+  assert.strictEqual(new Set(items.map(i => i.id)).size, 4);
+  const p = new G.entities.Player(300);
+  G.shop.apply(p, G.shop.POOL.find(i => i.id === 'plate'));
+  assert.ok(Math.abs(p.mods.armor - 0.1) < 1e-9);
+  p.takeDamage(20, 1);
+  assert.strictEqual(p.hp, 82);
+});

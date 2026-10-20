@@ -65,10 +65,12 @@
     }
     if (out.killed) {
       ctx.stats.kills++;
+      if (ctx.addGold) ctx.addGold(z.def.boss ? 20 : (z.affix ? 3 : 1));
       if (ctx.player.mods.lifesteal) ctx.player.heal(ctx.player.mods.lifesteal);
       if (ctx.player.mods.ammoRecycle && G.chance(ctx.player.mods.ammoRecycle)) ctx.player.recycleAmmo();
       if (ctx.player.mods.leechPct) ctx.player.heal(Math.max(1, Math.round(ctx.player.maxHp * ctx.player.mods.leechPct)));
-      ctx.addScore((z.def.score || 10) * (ctx.elite ? 2 : 1) * (ctx.scoreMult || 1));
+      if (z.affix === 'explosive') G.boom.queueBlast(ctx, z.x, z.y - 20, 46, 24, { self: true, chain: false });
+      ctx.addScore((z.def.score || 10) * (ctx.elite ? 2 : 1) * (ctx.scoreMult || 1) * (z.affix ? 1.5 : 1));
       if (G.chance(0.06)) ctx.spawnLoot(z.x);
       if (res.headshot) {
         z.hide.head = true;
@@ -104,6 +106,7 @@
     if (ctx.particles.spawnFeather) ctx.particles.spawnFeather(bird.x, bird.y, dir, 5);
     if (out.killed) {
       ctx.stats.kills++;
+      if (ctx.addGold) ctx.addGold(1);
       ctx.addScore((bird.def.score || 12) * (ctx.elite ? 2 : 1) * (ctx.scoreMult || 1));
       if (ctx.player.mods.lifesteal) ctx.player.heal(ctx.player.mods.lifesteal);
     }

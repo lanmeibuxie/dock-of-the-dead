@@ -9,6 +9,7 @@
   var debug = /[?&]debug=1/.test(location.search);
   var hordeDebug = /[?&]debug=horde/.test(location.search);
   var upgradeDebug = /[?&]debug=upgrade/.test(location.search);
+  var shopDebug = /[?&]debug=shop/.test(location.search);
   var god = /[?&]god=1/.test(location.search);
   var waveParam = /[?&]wave=(\d+)/.exec(location.search);
   var hordeParam = /[?&]horde=(\d+)/.exec(location.search);
@@ -25,6 +26,8 @@
   var frameNo = 0;
   var pickups = [];
   var score = 0;
+  var gold = 0;
+  var shopOffers = [], shopBought = {}, shopHover = -1;
   var hitMark = 0;
   var hitKill = false;
   var hitCrit = false;
@@ -81,13 +84,14 @@
     limbs: limbs, cam: G.gfx.cam, time: G.time, audio: G.audio, stats: null, elite: false,
     onHit: function (kill, crit) { hitMark = 0.1; hitKill = kill; hitCrit = crit; },
     addScore: function (n) { score += n; },
+    addGold: addGold,
     spawnLoot: function (x, kind) { G.director.spawnLoot(x, kind); }, queueBoom: queueBoom
   };
 
   var boomCtx = {
     player: null, zombies: zombies, birds: birds, particles: G.particles, cam: G.gfx.cam,
     time: G.time, level: G.level, audio: G.audio, stats: null, elite: false,
-    addScore: function (n) { score += n; }, queueBoom: queueBoom
+    addScore: function (n) { score += n; }, addGold: addGold, queueBoom: queueBoom
   };
 
   function explodeBomber(z) {
@@ -95,6 +99,41 @@
       player: player, zombies: zombies, particles: G.particles, cam: G.gfx.cam,
       time: G.time, level: G.level, audio: G.audio, queueBoom: queueBoom
     });
+  }
+
+  function addGold(n) { gold += n; }
+
+  function openShop() {
+    shopOffers = G.shop.roll(4, Math.random);
+    shopBought = {};
+    shopHover = -1;
+    setState('shop');
+    G.director.waveState = 'shop';
+  }
+
+  function buyShop(i) {
+    var item = shopOffers[i];
+    if (!item || shopBought[i] || gold < item.price) return;
+    gold -= item.price;
+    shopBought[i] = true;
+    G.shop.apply(player, item);
+    if (G.audio) G.audio.pickup();
+  }
+
+  function rerollShop() {
+    if (gold < G.shop.REROLL_COST) return;
+    gold -= G.shop.REROLL_COST;
+    shopOffers = G.shop.roll(4, Math.random);
+    shopBought = {};
+    shopHover = -1;
+    if (G.audio) G.audio.reload();
+  }
+
+  function closeShop() {
+    setState('playing');
+    G.director.waveState = 'breath';
+    G.director.breathT = 2.5;
+    shopOffers = [];
   }
 
   function die() {
@@ -195,6 +234,7 @@
       waveState: G.director.waveState, breathT: G.director.breathT, bannerText: G.director.bannerText, bannerT: G.director.bannerT,
       hitMark: hitMark, hitKill: hitKill, hitCrit: hitCrit, toastText: G.director.toastText, toastT: G.director.toastT,
       upgradeCards: G.director.cards, upgradeLevels: G.director.levels, upgradeHover: G.director.hover, upgradeSelected: G.director.selected, upgradeRerolls: G.director.rerolls, boss: G.director.bossRef, modifier: G.director.modifier,
+      gold: gold, shopOffers: shopOffers, shopBought: shopBought, shopHover: shopHover,
       mouse: G.input.mouse, muted: G.audio ? G.audio.muted : false
     });
   }
@@ -212,6 +252,10 @@
     hitMark = 0;
     hitKill = false;
     stats = { kills: 0, headshots: 0, shots: 0, hits: 0 };
+    gold = 0;
+    shopOffers = [];
+    shopBought = {};
+    shopHover = -1;
     G.game.stats = stats;
     hitCtx.stats = stats;
     boomCtx.stats = stats;
@@ -268,6 +312,16 @@
       G.level.update(dt, G.gfx.cam.x);
       G.particles.update(dt);
       G.director.inputUpgrade(G.input);
+    } else if (state === 'shop') {
+      G.gfx.cam.update(dt);
+      G.level.update(dt, G.gfx.cam.x);
+      G.particles.update(dt);
+      shopHover = G.shopui.input({
+        offers: shopOffers, bought: shopBought, gold: gold, mouse: G.input.mouse
+      }, G.input.mouse.clicked, G.input.pressed.bind(G.input),
+        function (i) { buyShop(i); },
+        function () { rerollShop(); },
+        function () { closeShop(); });
     } else if (state === 'dead') {
       deadT += dt;
       G.gfx.cam.update(dt);
@@ -302,6 +356,8 @@
 
   G.game = G.game || {};
   G.game.state = 'title'; G.game.debug = debug; G.game.setState = setState;
+  G.game.addGold = addGold; G.game.openShop = openShop;
+  G.game.shopInfo = function () { return { state: state, gold: gold, offers: shopOffers.length, bought: Object.keys(shopBought).length }; };
   G.game.upgradeState = function () { return { state: state, selected: G.director.selected, hover: G.director.hover, cards: G.director.cards.length }; };
   G.game.queueBoom = queueBoom; G.game.explodeBomber = explodeBomber;
   G.game.god = god;
@@ -334,6 +390,15 @@
       G.director.waveState = 'fight';
       G.director.bannerT = 0;
       G.director.openUpgrade();
+    }
+    if (shopDebug) {
+      resetGame(1);
+      G.director.spawnQueue = [];
+      zombies.length = 0;
+      G.director.waveState = 'fight';
+      G.director.bannerT = 0;
+      addGold(20);
+      openShop();
     }
     if (hordeDebug) {
       if (!waveParam) resetGame();

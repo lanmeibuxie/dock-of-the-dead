@@ -14,7 +14,7 @@ const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
   page.on('pageerror', e => errors.push('PAGE: ' + e.message));
   await page.goto(url);
   await page.waitForTimeout(600);
-  if (scenario && !['title','elite','clickstart','upgradepick','upgradedouble','upgradesel','pierce','reload','birdattack','boss','reroll','mod','perf'].includes(scenario)) {
+  if (scenario && !['title','elite','clickstart','upgradepick','upgradedouble','upgradesel','pierce','reload','birdattack','boss','reroll','shop','mod','perf'].includes(scenario)) {
     await page.keyboard.press('Enter');
     await page.waitForTimeout(320);
   }
@@ -191,6 +191,31 @@ const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
     console.log('REROLL', JSON.stringify(await page.evaluate(() => ({
       rerolls: G.director.rerolls, cards: G.director.cards.map(c => c.id), state: G.game.state
     }))));
+    if (errors.length) console.log(errors.join(String.fromCharCode(10))); else console.log('NO PAGE ERRORS');
+    await browser.close();
+    return;
+  }
+
+  if (scenario === 'shop') {
+    await page.waitForTimeout(300);
+    const box = await page.evaluate(() => G.upgradeui.CARD_RECTS[0]);
+    await page.mouse.click((box.x + box.w / 2) * 2, (box.y + box.h / 2) * 2);
+    await page.waitForTimeout(120);
+    const cf = await page.evaluate(() => G.upgradeui.CONFIRM_RECT);
+    await page.mouse.click((cf.x + cf.w / 2) * 2, (cf.y + cf.h / 2) * 2);
+    await page.waitForTimeout(300);
+    await page.evaluate(() => G.game.addGold(20));
+    await page.waitForTimeout(100);
+    await page.screenshot({ path: out });
+    const before = await page.evaluate(() => G.game.shopInfo());
+    const card = await page.evaluate(() => G.shopui.CARD_RECTS[0]);
+    await page.mouse.click((card.x + card.w / 2) * 2, (card.y + card.h / 2) * 2);
+    await page.waitForTimeout(150);
+    const lv = await page.evaluate(() => G.shopui.LEAVE_RECT);
+    await page.mouse.click((lv.x + lv.w / 2) * 2, (lv.y + lv.h / 2) * 2);
+    await page.waitForTimeout(150);
+    const after = await page.evaluate(() => G.game.shopInfo());
+    console.log('SHOP', JSON.stringify({ before, after }));
     if (errors.length) console.log(errors.join(String.fromCharCode(10))); else console.log('NO PAGE ERRORS');
     await browser.close();
     return;

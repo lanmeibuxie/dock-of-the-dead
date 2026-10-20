@@ -69,7 +69,7 @@ def main():
         hexrows = ','.join('0x%04x' % r for r in rows)
         key = json.dumps(ch, ensure_ascii=False)
         items.append('    %s: [%d,%s]' % (key, advance, hexrows))
-    out.append(',\n'.join(items))
+    out.append(','.join(items))
     out.append('  };')
     out.append('  function has(ch) { return !!GLYPHS[ch]; }')
     out.append('  function width(text, scale) {')

@@ -33,6 +33,7 @@
       var out = z.hit('torso', dmg, z.x < bx ? -1 : 1, 'explosion', null, 1.2);
       if (out.killed) {
         if (ctx.stats) ctx.stats.kills++;
+        if (ctx.addGold) ctx.addGold(z.def.boss ? 20 : (z.affix ? 3 : 1));
         if (ctx.addScore) ctx.addScore((z.def.score || 10) * (ctx.elite ? 2 : 1) * (ctx.scoreMult || 1));
         if (ctx.player.mods && ctx.player.mods.lifesteal) ctx.player.heal(ctx.player.mods.lifesteal);
         if (z.type === 'bomber' && ctx.queueBoom) ctx.queueBoom(z);
@@ -82,8 +83,8 @@
     });
   }
 
-  function queueBlast(ctx, x, y, radius, damage) {
-    queued.push({ ctx: ctx, x: x, y: y, radius: radius, damage: damage, t: 0.12 });
+  function queueBlast(ctx, x, y, radius, damage, opt) {
+    queued.push({ ctx: ctx, x: x, y: y, radius: radius, damage: damage, opt: opt || null, t: 0.12 });
   }
 
   function update(booms, dt, ctx) {
@@ -98,7 +99,11 @@
       queued[q].t -= dt;
       if (queued[q].t <= 0) {
         var b = queued[q];
-        blastAt(b.x, b.y, b.ctx, { radius: b.radius, damage: b.damage, self: false, chain: false });
+        var bo = b.opt || {};
+        blastAt(b.x, b.y, b.ctx, {
+          radius: b.radius, damage: b.damage,
+          self: bo.self === true, chain: bo.chain !== false
+        });
         queued.splice(q, 1);
       }
     }

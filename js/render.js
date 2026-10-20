@@ -63,7 +63,7 @@
       waveState: s.waveState, breathT: s.breathT,
       bannerText: (s.state === 'paused' || s.state === 'dead') ? '' : s.bannerText,
       bannerT: (s.state === 'paused' || s.state === 'dead') ? 0 : s.bannerT,
-      muted: s.muted, t: G.level.time, toastText: s.toastText, toastT: s.toastT, boss: s.boss, modifier: s.modifier
+      muted: s.muted, t: G.level.time, toastText: s.toastText, toastT: s.toastT, boss: s.boss, modifier: s.modifier, gold: s.gold
     });
 
     if (s.state === 'playing') {
@@ -74,6 +74,12 @@
       G.upgradeui.draw(ctx, {
         cards: s.upgradeCards, levels: s.upgradeLevels, wave: s.waveNo,
         hover: s.upgradeHover, selected: s.upgradeSelected, rerolls: s.upgradeRerolls, mouse: s.mouse
+      });
+    }
+    if (s.state === 'shop') {
+      G.shopui.draw(ctx, {
+        offers: s.shopOffers, bought: s.shopBought, gold: s.gold,
+        hover: s.shopHover, mouse: s.mouse
       });
     }
     if (s.state === 'paused') G.hud.pause(ctx);

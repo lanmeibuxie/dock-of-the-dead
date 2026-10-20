@@ -117,6 +117,7 @@
     if (s.elite) font('ELITE WAVE', 6, 14, '#c8393f', 1);
     if (s.muted) font('MUTE', 6, s.elite ? 22 : 14, '#7d8478', 1);
     font('SCORE ' + formatScore(s.score), G.W - 6, 6, '#c9c2a8', 1, 'right');
+    font('$ ' + (s.gold || 0), G.W - 6, 16, '#ffc46b', 1, 'right');
 
     ctx.fillStyle = 'rgba(0,0,0,0.45)';
     ctx.fillRect(7, G.H - 18, 86, 9);
@@ -149,7 +150,7 @@
       ctx.fillRect(140, 36, bw, 3);
     }
     if (s.modifier) {
-      G.cnfont.draw(ctx, s.modifier.name, G.W - 6, 16, s.modifier.color, 1, 'right');
+      G.cnfont.draw(ctx, s.modifier.name, G.W - 6, 26, s.modifier.color, 1, 'right');
     }
     var w = p.weapon();
     font(w.def.name, G.W - 6, G.H - 27, '#a8b0a0', 1, 'right');

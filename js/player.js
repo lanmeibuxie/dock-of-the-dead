@@ -42,7 +42,7 @@
       pierce: 0, knock: 0, lifesteal: 0, pickup: 0, ammo: 0, recoil: 0,
       jetFuel: 0, jetThrust: 0, jetRegen: 0, jetAir: 0, blastResist: 0,
       blastDamage: 0, blastRadius: 0, ammoRecycle: 0, airDamage: 0, airSpeed: 0,
-      spread: 0, volatile: 0, blastChain: 0, ammoPrint: 0, leechPct: 0, adrenaline: 0, lastStand: 0
+      spread: 0, volatile: 0, blastChain: 0, ammoPrint: 0, leechPct: 0, adrenaline: 0, lastStand: 0, armor: 0
     };
     this.fuel = G.JET.maxFuel;
     this.maxFuel = G.JET.maxFuel;
@@ -90,6 +90,7 @@
     m.leechPct = Math.min(0.05, m.leechPct);
     m.adrenaline = Math.min(0.6, m.adrenaline);
     m.lastStand = Math.min(0.6, m.lastStand);
+    m.armor = Math.min(0.6, m.armor);
     var newMax = G.JET.maxFuel * (1 + m.jetFuel);
     if (newMax > this.maxFuel) this.fuel = Math.min(newMax, this.fuel + (newMax - this.maxFuel));
     this.maxFuel = newMax;
@@ -359,6 +360,7 @@
   Player.prototype.takeDamage = function (n, dirX) {
     if (G.game && G.game.god) return false;
     if (this.invuln > 0 || this.hp <= 0) return false;
+    n = Math.max(1, Math.round(n * (1 - this.mods.armor)));
     if (this.hp / this.maxHp < 0.3 && this.mods.lastStand > 0) n = Math.max(1, Math.round(n * (1 - this.mods.lastStand)));
     this.hp -= n;
     this.invuln = 0.6;

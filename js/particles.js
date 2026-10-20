@@ -189,6 +189,7 @@
         p.life -= dt;
         if (p.life <= 0) { release(p); continue; }
 
+        if (p.rested) continue;
         if (p.kind === 'smoke') {
           p.x += p.vx * dt;
           p.y += p.vy * dt;
@@ -230,8 +231,7 @@
             p.y = gy;
             p.vy *= -0.35;
             p.vx *= 0.7;
-            p.grav = 0;
-            if (Math.abs(p.vy) < 20) p.vy = 0;
+            if (Math.abs(p.vy) < 30) { p.vy = 0; p.vx = 0; p.rested = true; }
           }
         } else if (p.kind === 'bone') {
           if (p.y >= gy) {
@@ -250,8 +250,7 @@
             p.y = gy;
             p.vy *= -0.3;
             p.vx *= 0.6;
-            p.grav = 0;
-            if (Math.abs(p.vy) < 20) p.vy = 0;
+            if (Math.abs(p.vy) < 25) { p.vy = 0; p.vx = 0; p.rested = true; }
           }
         }
       }

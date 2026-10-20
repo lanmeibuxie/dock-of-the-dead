@@ -15,14 +15,10 @@
     this.maxHp = def.hp;
     this.damage = def.damage;
     this.speed = def.speed;
-    this.fuseT = 0;
-    this.exploded = false;
-    this.boomQueued = false;
+    this.fuseT = 0; this.exploded = false; this.boomQueued = false;
     this.state = fromWater ? 'climb' : 'walk';
     this.climbT = fromWater ? 0.8 : 0;
-    this.stagger = 0;
-    this.flash = 0;
-    this.knockVx = 0;
+    this.stagger = 0; this.flash = 0; this.knockVx = 0;
     this.windupT = 0;
     this.recoverT = 0;
     this.hitDone = false;
@@ -33,8 +29,7 @@
     this.walkPhase = G.rand(0, Math.PI * 2);
     this.hide = Object.create(null);
     this.limbDamage = { armF: 0, armB: 0, legF: 0, legB: 0 };
-    this.dead = false;
-    this.deathT = 0;
+    this.dead = false; this.deathT = 0; this.affix = null;
     this.severedCount = 0;
     if (def.boss) {
       this.slamCd = 2.0;
@@ -300,6 +295,13 @@
       ctx.fillStyle = 'rgba(220,60,50,0.08)';
       ctx.beginPath();
       ctx.arc(sx, sy - 34, 34, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (this.affix && !this.dead) {
+      var ac = this.affix === 'armored' ? '170,180,190' : this.affix === 'swift' ? '90,210,230' : '240,120,40';
+      ctx.fillStyle = 'rgba(' + ac + ',0.12)';
+      ctx.beginPath();
+      ctx.arc(sx, sy - 20, 17, 0, Math.PI * 2);
       ctx.fill();
     }
     if (this.type === 'bomber' && !this.dead) {
