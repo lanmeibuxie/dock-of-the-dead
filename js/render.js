@@ -24,6 +24,7 @@
           if (bd.x >= minX - 40 && bd.x <= maxX + 40) bd.draw(ctx);
         }
       }
+      G.hazards.draw(ctx);
       for (var i = 0; i < s.shots.length; i++) s.shots[i].draw(ctx);
       if (s.grenades) {
         for (var gi = 0; gi < s.grenades.length; gi++) s.grenades[gi].draw(ctx);
@@ -62,7 +63,7 @@
       waveState: s.waveState, breathT: s.breathT,
       bannerText: (s.state === 'paused' || s.state === 'dead') ? '' : s.bannerText,
       bannerT: (s.state === 'paused' || s.state === 'dead') ? 0 : s.bannerT,
-      muted: s.muted, t: G.level.time, toastText: s.toastText, toastT: s.toastT
+      muted: s.muted, t: G.level.time, toastText: s.toastText, toastT: s.toastT, boss: s.boss, modifier: s.modifier
     });
 
     if (s.state === 'playing') {
@@ -72,7 +73,7 @@
     if (s.state === 'upgrade') {
       G.upgradeui.draw(ctx, {
         cards: s.upgradeCards, levels: s.upgradeLevels, wave: s.waveNo,
-        hover: s.upgradeHover, selected: s.upgradeSelected, mouse: s.mouse
+        hover: s.upgradeHover, selected: s.upgradeSelected, rerolls: s.upgradeRerolls, mouse: s.mouse
       });
     }
     if (s.state === 'paused') G.hud.pause(ctx);

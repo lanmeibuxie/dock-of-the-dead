@@ -9,6 +9,7 @@
     { x: 322, y: 60, w: 132, h: 152 }
   ];
   var CONFIRM_RECT = { x: 204, y: 234, w: 72, h: 20 };
+  var REROLL_RECT = { x: 126, y: 234, w: 72, h: 20 };
   var RARITY_COLORS = ['#8f9d95', '#5ea9c9', '#d19a3c'];
   var RARITY_NAMES = ['普通', '稀有', '史诗'];
 
@@ -178,6 +179,7 @@
         G.cnfont.draw(ctx, lines[li], r.x + 8, y + 58 + li * 16, '#9aa89f', 1);
       }
       G.cnfont.draw(ctx, RARITY_NAMES[card.rarity], r.x + 8, y + 122, RARITY_COLORS[card.rarity], 1);
+      if (card.tag) G.cnfont.draw(ctx, G.upgrades.TAG_NAMES[card.tag], r.x + r.w - 8, y + 122, '#8f9d95', 1, 'right');
 
       var lv = G.upgrades.levelOf(card.id, s.levels);
       for (var p = 0; p < card.max; p++) {
@@ -189,7 +191,14 @@
       ctx.strokeRect(r.x + 0.5, y + 0.5, r.w - 1, r.h - 1);
     }
 
-    G.cnfont.draw(ctx, '点击选择 · 再点确定 / ENTER', G.W / 2, 216, '#7d8a80', 1, 'center');
+    G.cnfont.draw(ctx, '点击选择 · 再点确定 / ENTER · R 刷新', G.W / 2, 216, '#7d8a80', 1, 'center');
+    var rerollOn = s.rerolls > 0;
+    ctx.fillStyle = rerollOn ? '#1c2a22' : '#161c1e';
+    ctx.fillRect(REROLL_RECT.x, REROLL_RECT.y, REROLL_RECT.w, REROLL_RECT.h);
+    ctx.strokeStyle = rerollOn ? '#7fff9f' : '#3a4442';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(REROLL_RECT.x + 1, REROLL_RECT.y + 1, REROLL_RECT.w - 2, REROLL_RECT.h - 2);
+    G.cnfont.draw(ctx, '刷新 ' + (s.rerolls || 0), REROLL_RECT.x + REROLL_RECT.w / 2, REROLL_RECT.y + 4, rerollOn ? '#7fff9f' : '#5a6660', 1, 'center');
     var on = s.selected >= 0;
     ctx.fillStyle = on ? '#3a2a16' : '#161c1e';
     ctx.fillRect(CONFIRM_RECT.x, CONFIRM_RECT.y, CONFIRM_RECT.w, CONFIRM_RECT.h);
@@ -201,7 +210,7 @@
     cursor(ctx, s.mouse);
   }
 
-  function input(cards, selected, mouse, clicked, pressed, confirmCb) {
+  function input(cards, selected, mouse, clicked, pressed, confirmCb, rerollCb, rerolls) {
     var hover = -1;
     for (var i = 0; i < CARD_RECTS.length; i++) {
       var r = CARD_RECTS[i];
@@ -209,12 +218,16 @@
     }
     var cr = CONFIRM_RECT;
     var onConfirm = mouse.x >= cr.x && mouse.x <= cr.x + cr.w && mouse.y >= cr.y && mouse.y <= cr.y + cr.h;
+    var rr = REROLL_RECT;
+    var onReroll = mouse.x >= rr.x && mouse.x <= rr.x + rr.w && mouse.y >= rr.y && mouse.y <= rr.y + rr.h;
     if (clicked) {
       if (onConfirm && selected >= 0) confirmCb(selected);
+      else if (onReroll && rerolls > 0) { selected = -1; rerollCb(); }
       else if (hover >= 0) {
         selected = hover;
       }
     }
+    if (pressed('KeyR') && rerolls > 0) { selected = -1; rerollCb(); }
     if (pressed('Digit1') && cards[0]) selected = 0;
     if (pressed('Digit2') && cards[1]) selected = 1;
     if (pressed('Digit3') && cards[2]) selected = 2;
@@ -225,6 +238,7 @@
   G.upgradeui = {
     CARD_RECTS: CARD_RECTS,
     CONFIRM_RECT: CONFIRM_RECT,
+    REROLL_RECT: REROLL_RECT,
     input: input,
     draw: draw,
     cursor: cursor

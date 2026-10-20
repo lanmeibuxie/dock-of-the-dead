@@ -16,6 +16,7 @@
     flash: 0,
     themeMix: 0,
     themeTarget: 0,
+    modifier: null,
     lightSprite: null,
     glowSprite: null,
     vignetteSprite: null,
@@ -62,6 +63,8 @@
       return L;
     },
 
+    setModifier: function (id) { this.modifier = id; },
+
     setTheme: function (day) {
       var target = day ? 1 : 0;
       var changed = target !== this.themeTarget;
@@ -82,6 +85,7 @@
       this.build();
       this.themeMix = 0;
       this.themeTarget = 0;
+      this.modifier = null;
       this.time = 0;
       this.flash = 0;
       this.decalCount = 0;
@@ -255,7 +259,7 @@
         ctx.fillRect(lx - 16, lp.y - 2, 32, 3);
         ctx.fillStyle = day > 0.5 ? '#52646a' : '#1b2729';
         ctx.fillRect(lx - 8, lp.y - 12, 16, 5);
-        if (T.lamp > 0.08) {
+        if (T.lamp > 0.08 && this.modifier !== 'blackout') {
           ctx.fillStyle = 'rgba(255,196,107,' + (0.55 * flick * T.lamp) + ')';
           ctx.fillRect(lx - 5, lp.y - 3, 10, 3);
         }
@@ -273,6 +277,10 @@
       ctx.fillStyle = this.waterGradient(ctx, T, gy + L.deckH);
       ctx.fillRect(0, gy + L.deckH, G.W, G.H - gy - L.deckH);
 
+      if (this.modifier === 'tide') {
+        ctx.fillStyle = 'rgba(60,140,155,0.20)';
+        ctx.fillRect(0, gy - 2, G.W, L.deckH + 8);
+      }
       ctx.fillStyle = 'rgba(120,180,175,0.10)';
       for (var w = 0; w < 16; w++) {
         var wy = gy + 16 + (w % 6) * 8;
@@ -393,7 +401,8 @@
       var lc = this.lightCtx;
       lc.clearRect(0, 0, G.W, G.H);
       lc.globalCompositeOperation = 'source-over';
-      lc.fillStyle = 'rgba(5,9,16,' + T.ambient + ')';
+      var amb = T.ambient + (this.modifier === 'blackout' ? 0.16 : 0);
+      lc.fillStyle = 'rgba(5,9,16,' + amb + ')';
       lc.fillRect(0, 0, G.W, G.H);
       lc.globalCompositeOperation = 'destination-out';
 
@@ -402,21 +411,21 @@
         lc.drawImage(this.lightSprite, sx - r, sy - r, r * 2, r * 2);
       }
 
-      if (T.lamp > 0.05) {
+      if (T.lamp > 0.05 && this.modifier !== 'blackout') {
         for (var i = 0; i < L.lamps.length; i++) {
           var lp = L.lamps[i];
           var flick = 0.9 + 0.1 * Math.sin(this.time * 9 + i * 3.1);
           punch.call(this, lp.x - camX, lp.y + 6, lp.r * flick * 1.25);
         }
       }
-      punch.call(this, G.W / 2, G.H - 60, T.lamp > 0.5 ? 135 : 90);
+      punch.call(this, G.W / 2, G.H - 60, this.modifier === 'blackout' ? 105 : (T.lamp > 0.5 ? 135 : 90));
       if (extra) {
         for (var e = 0; e < extra.length; e++) punch.call(this, extra[e].x - camX, extra[e].y, extra[e].r);
       }
       lc.globalCompositeOperation = 'source-over';
       ctx.drawImage(this.lightCanvas, 0, 0);
 
-      if (T.lamp > 0.05) {
+      if (T.lamp > 0.05 && this.modifier !== 'blackout') {
         ctx.globalCompositeOperation = 'lighter';
         for (var j = 0; j < L.lamps.length; j++) {
           var lq = L.lamps[j];
@@ -450,6 +459,10 @@
         ctx.fillRect(0, 0, G.W, G.H);
       }
 
+      if (this.modifier === 'bloodMoon') {
+        ctx.fillStyle = 'rgba(150,20,40,0.10)';
+        ctx.fillRect(0, 0, G.W, G.H);
+      }
       this.ensureLights();
       ctx.globalAlpha = T.vignette;
       ctx.drawImage(this.vignetteSprite, 0, 0);

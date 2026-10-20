@@ -41,7 +41,8 @@
       damage: 0, fireRate: 0, reload: 0, mag: 0, speed: 0, crit: 0, critMult: 2,
       pierce: 0, knock: 0, lifesteal: 0, pickup: 0, ammo: 0, recoil: 0,
       jetFuel: 0, jetThrust: 0, jetRegen: 0, jetAir: 0, blastResist: 0,
-      blastDamage: 0, blastRadius: 0, ammoRecycle: 0, airDamage: 0, airSpeed: 0
+      blastDamage: 0, blastRadius: 0, ammoRecycle: 0, airDamage: 0, airSpeed: 0,
+      spread: 0, volatile: 0, blastChain: 0, ammoPrint: 0, leechPct: 0, adrenaline: 0, lastStand: 0
     };
     this.fuel = G.JET.maxFuel;
     this.maxFuel = G.JET.maxFuel;
@@ -52,6 +53,8 @@
     this.thrusting = false;
     this.wasThrusting = false;
     this.reloadFx = { out: false, in: false, slam: false };
+    this.ammoPrintT = 5;
+    this.setFlags = {};
     this.syncMods();
   }
 
@@ -80,6 +83,13 @@
     m.ammoRecycle = Math.min(0.6, m.ammoRecycle);
     m.airDamage = Math.min(0.6, m.airDamage);
     m.airSpeed = Math.min(0.4, m.airSpeed);
+    m.spread = Math.min(2, m.spread);
+    m.volatile = Math.min(0.6, m.volatile);
+    m.blastChain = Math.min(0.6, m.blastChain);
+    m.ammoPrint = Math.min(3, m.ammoPrint);
+    m.leechPct = Math.min(0.05, m.leechPct);
+    m.adrenaline = Math.min(0.6, m.adrenaline);
+    m.lastStand = Math.min(0.6, m.lastStand);
     var newMax = G.JET.maxFuel * (1 + m.jetFuel);
     if (newMax > this.maxFuel) this.fuel = Math.min(newMax, this.fuel + (newMax - this.maxFuel));
     this.maxFuel = newMax;
@@ -247,6 +257,8 @@
       this.reloadRequested = true;
       this.spin = 0;
       this.reloadFx = { out: false, in: false, slam: false };
+    this.ammoPrintT = 5;
+    this.setFlags = {};
       if (G.audio) G.audio.reload();
     }
     if (w.reloading) {
@@ -273,6 +285,13 @@
       }
     }
 
+    if (this.mods.ammoPrint > 0) {
+      this.ammoPrintT -= dt;
+      if (this.ammoPrintT <= 0) {
+        this.recycleAmmo();
+        this.ammoPrintT = 5 / this.mods.ammoPrint;
+      }
+    }
     this.recoil = Math.max(0, this.recoil - dt * 26);
     this.flash = Math.max(0, this.flash - dt);
     this.invuln = Math.max(0, this.invuln - dt);
@@ -295,6 +314,7 @@
     var angles = [];
     var crits = [];
     var airBoost = this.onGround ? 0 : this.mods.airDamage;
+    var lowHp = this.hp / this.maxHp < 0.4 ? this.mods.adrenaline : 0;
     if (this.current === 'launcher') {
       var gx = this.x + Math.cos(this.aim) * 10;
       var gy = this.y - 23 + Math.sin(this.aim) * 10;
@@ -302,16 +322,16 @@
       this.recoil = Math.min(10, this.recoil + def.recoil * (1 + this.mods.recoil));
       return {
         weapon: 'launcher', grenade: true, x: gx, y: gy, angle: this.aim,
-        damage: def.damage * (1 + this.mods.damage + airBoost + this.mods.blastDamage),
+        damage: def.damage * (1 + this.mods.damage + airBoost + lowHp + this.mods.blastDamage),
         radius: def.blastRadius * (1 + this.mods.blastRadius),
         angles: [this.aim], crits: [false], pierce: 0, knockScale: 1 + this.mods.knock
       };
     }
     if (pellets === 1) {
-      angles.push(this.aim + G.rand(-def.spread, def.spread) * 0.5);
+      angles.push(this.aim + G.rand(-def.spread, def.spread) * 0.5 * (1 + this.mods.spread));
     } else {
       for (var i = 0; i < pellets; i++) {
-        var base = pellets === 1 ? 0 : (i / (pellets - 1) - 0.5) * def.spread;
+        var base = pellets === 1 ? 0 : (i / (pellets - 1) - 0.5) * def.spread * (1 + this.mods.spread);
         angles.push(this.aim + base + G.rand(-0.018, 0.018));
       }
     }
@@ -320,7 +340,7 @@
     this.flash = 0.06;
     this.recoil = Math.min(10, this.recoil + def.recoil * (1 + this.mods.recoil));
     this.hurtT = Math.max(this.hurtT, 0);
-    var amount = def.damage * (1 + this.mods.damage + airBoost);
+    var amount = def.damage * (1 + this.mods.damage + airBoost + lowHp);
     return {
       weapon: this.current,
       angles: angles,
@@ -339,6 +359,7 @@
   Player.prototype.takeDamage = function (n, dirX) {
     if (G.game && G.game.god) return false;
     if (this.invuln > 0 || this.hp <= 0) return false;
+    if (this.hp / this.maxHp < 0.3 && this.mods.lastStand > 0) n = Math.max(1, Math.round(n * (1 - this.mods.lastStand)));
     this.hp -= n;
     this.invuln = 0.6;
     this.hurtT = 0.3;

@@ -138,6 +138,19 @@
     ctx.fillRect(8, G.H - 7, fuelW, 3);
     font('JET', 95, G.H - 8, '#a8b0a0', 1);
 
+    if (s.boss && !s.boss.dead) {
+      G.cnfont.draw(ctx, s.boss.def.bossName, G.W / 2, 17, '#e06a5a', 1, 'center');
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(138, 34, 204, 7);
+      ctx.fillStyle = '#3a1216';
+      ctx.fillRect(140, 36, 200, 3);
+      var bw = Math.max(0, Math.round(200 * s.boss.hp / s.boss.maxHp));
+      ctx.fillStyle = '#c8393f';
+      ctx.fillRect(140, 36, bw, 3);
+    }
+    if (s.modifier) {
+      G.cnfont.draw(ctx, s.modifier.name, G.W - 6, 16, s.modifier.color, 1, 'right');
+    }
     var w = p.weapon();
     font(w.def.name, G.W - 6, G.H - 27, '#a8b0a0', 1, 'right');
     font(w.ammo + ' / ' + (w.reserve === Infinity ? '\u221e' : w.reserve), G.W - 6, G.H - 17,

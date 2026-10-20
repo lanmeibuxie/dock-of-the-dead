@@ -14,7 +14,7 @@ const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
   page.on('pageerror', e => errors.push('PAGE: ' + e.message));
   await page.goto(url);
   await page.waitForTimeout(600);
-  if (scenario && !['title','elite','clickstart','upgradepick','upgradedouble','upgradesel','pierce','reload','birdattack','perf'].includes(scenario)) {
+  if (scenario && !['title','elite','clickstart','upgradepick','upgradedouble','upgradesel','pierce','reload','birdattack','boss','reroll','mod','perf'].includes(scenario)) {
     await page.keyboard.press('Enter');
     await page.waitForTimeout(320);
   }
@@ -177,6 +177,45 @@ const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
     await page.waitForTimeout(250);
     await page.screenshot({ path: out });
     console.log('UPGRADESEL', JSON.stringify(await page.evaluate(() => G.game.upgradeState())));
+    if (errors.length) console.log(errors.join(String.fromCharCode(10))); else console.log('NO PAGE ERRORS');
+    await browser.close();
+    return;
+  }
+
+  if (scenario === 'reroll') {
+    await page.waitForTimeout(300);
+    const rr = await page.evaluate(() => G.upgradeui.REROLL_RECT);
+    await page.mouse.click((rr.x + rr.w / 2) * 2, (rr.y + rr.h / 2) * 2);
+    await page.waitForTimeout(250);
+    await page.screenshot({ path: out });
+    console.log('REROLL', JSON.stringify(await page.evaluate(() => ({
+      rerolls: G.director.rerolls, cards: G.director.cards.map(c => c.id), state: G.game.state
+    }))));
+    if (errors.length) console.log(errors.join(String.fromCharCode(10))); else console.log('NO PAGE ERRORS');
+    await browser.close();
+    return;
+  }
+
+  if (scenario === 'mod') {
+    await page.waitForTimeout(1800);
+    await page.screenshot({ path: out });
+    console.log('MOD', JSON.stringify(await page.evaluate(() => ({
+      mod: G.director.modifier ? G.director.modifier.id : null,
+      wave: G.director.waveNo, pickups: G.game.pickups.map(p => p.kind)
+    }))));
+    if (errors.length) console.log(errors.join(String.fromCharCode(10))); else console.log('NO PAGE ERRORS');
+    await browser.close();
+    return;
+  }
+
+  if (scenario === 'boss') {
+    await page.waitForTimeout(5200);
+    await page.screenshot({ path: out });
+    const st = await page.evaluate(() => {
+      const b = G.game.zombies.find(z => z.def.boss);
+      return { boss: b ? { type: b.type, hp: Math.round(b.hp), maxHp: Math.round(b.maxHp), state: b.state } : null, hazards: G.game.state };
+    });
+    console.log('BOSS', JSON.stringify(st));
     if (errors.length) console.log(errors.join(String.fromCharCode(10))); else console.log('NO PAGE ERRORS');
     await browser.close();
     return;

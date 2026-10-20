@@ -122,3 +122,11 @@
 - 规格覆盖：性能（Task 4）、无尽（Task 1/7）、喷气（Task 5）、榴弹自伤（Task 6）、鸟（Task 7）、昼夜（Task 3）、震屏（Task 3）、码头美术（Task 2）、确认（Task 8）、平衡（Task 9）。
 - 接口：`G.hits.resolve(shot, ctx)`、`G.birds.Bird`、`G.grenade.Grenade`、`G.themes`、`G.zombieart.rig(type)`。
 - 无占位符；所有步骤有明确文件与验收。
+
+
+## 追加：A+B 扩展
+
+- [x] Boss 波（吊机尸/巨溺者）+ 血条 + 场地危险 + 史诗奖励。
+- [x] 词缀 4 个 + HUD 标签 + `?mod=` 调试。
+- [x] 8 张机制/代价卡 + 标签套装 + 每波免费刷新。
+- [x] 弹药全补给、换弹动画、鸟群主动攻击、穿透定格防抖、确认误触修正。

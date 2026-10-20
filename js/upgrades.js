@@ -7,30 +7,38 @@
     { id: 'damage', name: '伤害强化', desc: '所有武器伤害 +10%', rarity: 0, max: 8, icon: 'damage', stats: { damage: 0.10 } },
     { id: 'fireRate', name: '射速强化', desc: '射击速度 +8%', rarity: 0, max: 8, icon: 'rate', stats: { fireRate: 0.08 } },
     { id: 'reload', name: '快速换弹', desc: '换弹速度 +12%', rarity: 0, max: 8, icon: 'reload', stats: { reload: 0.12 } },
-    { id: 'mag', name: '扩容弹匣', desc: '弹匣容量 +15%', rarity: 0, max: 8, icon: 'mag', stats: { mag: 0.15 } },
+    { id: 'mag', name: '扩容弹匣', desc: '弹匣容量 +15%', rarity: 0, max: 8, icon: 'mag', stats: { mag: 0.15 }, tag: 'ammo' },
     { id: 'hp', name: '生命强化', desc: '生命上限 +15，回复 15', rarity: 0, max: 8, icon: 'hp', stats: { maxHp: 15, heal: 15 } },
     { id: 'speed', name: '移动强化', desc: '移动速度 +6%', rarity: 0, max: 8, icon: 'speed', stats: { speed: 0.06 } },
     { id: 'knock', name: '强力击退', desc: '击退力 +20%', rarity: 0, max: 8, icon: 'knock', stats: { knock: 0.20 } },
     { id: 'pickup', name: '磁力拾取', desc: '拾取范围 +40%', rarity: 0, max: 8, icon: 'pickup', stats: { pickup: 0.40 } },
-    { id: 'ammo', name: '弹药专精', desc: '弹药拾取量 +25%', rarity: 0, max: 8, icon: 'ammo', stats: { ammo: 0.25 } },
+    { id: 'ammo', name: '弹药专精', desc: '弹药拾取量 +25%', rarity: 0, max: 8, icon: 'ammo', stats: { ammo: 0.25 }, tag: 'ammo' },
 
     { id: 'crit', name: '暴击强化', desc: '暴击率 +8%，暴击 2 倍', rarity: 1, max: 5, icon: 'crit', stats: { crit: 0.08 } },
     { id: 'pierce', name: '穿透弹头', desc: '子弹额外穿透 1 个敌人', rarity: 1, max: 4, icon: 'pierce', stats: { pierce: 1 } },
-    { id: 'leech', name: '嗜血', desc: '每次击杀回复 2 点生命', rarity: 1, max: 5, icon: 'leech', stats: { lifesteal: 2 } },
+    { id: 'leech', name: '嗜血', desc: '每次击杀回复 2 点生命', rarity: 1, max: 5, icon: 'leech', stats: { lifesteal: 2 }, tag: 'blood' },
     { id: 'steady', name: '稳固枪身', desc: '后坐力 -25%，射速 +5%', rarity: 1, max: 5, icon: 'steady', stats: { recoil: -0.25, fireRate: 0.05 } },
-    { id: 'medic', name: '战地急救', desc: '回复 40 生命，上限 +10', rarity: 1, max: 5, icon: 'heal', stats: { heal: 40, maxHp: 10 } },
+    { id: 'medic', name: '战地急救', desc: '回复 40 生命，上限 +10', rarity: 1, max: 5, icon: 'heal', stats: { heal: 40, maxHp: 10 }, tag: 'blood' },
 
     { id: 'critEye', name: '死神之眼', desc: '暴击率 +15%，暴击伤害 +0.5 倍', rarity: 2, max: 3, icon: 'crit', stats: { crit: 0.15, critMult: 0.5 } },
     { id: 'bulletStorm', name: '弹幕风暴', desc: '射速 +15%，弹匣 +20%', rarity: 2, max: 3, icon: 'storm', stats: { fireRate: 0.15, mag: 0.20 } },
     { id: 'hunter', name: '尸潮猎手', desc: '伤害 +20%，换弹 +10%', rarity: 2, max: 3, icon: 'hunter', stats: { damage: 0.20, reload: 0.10 } },
-    { id: 'undying', name: '不灭意志', desc: '生命上限 +30，击杀回复 1', rarity: 2, max: 3, icon: 'undying', stats: { maxHp: 30, lifesteal: 1 } },
+    { id: 'undying', name: '不灭意志', desc: '生命上限 +30，击杀回复 1', rarity: 2, max: 3, icon: 'undying', stats: { maxHp: 30, lifesteal: 1 }, tag: 'blood' },
 
-    { id: 'rocketFuel', name: '火箭燃料', desc: '燃料上限 +60%，落地回充 +60%', rarity: 0, max: 3, icon: 'fuel', stats: { jetFuel: 0.60, jetRegen: 0.60 } },
-    { id: 'blastMaster', name: '爆破专精', desc: '爆炸伤害 +25%，半径 +10%', rarity: 1, max: 4, icon: 'blast', stats: { blastDamage: 0.25, blastRadius: 0.10 } },
-    { id: 'ammoRecycle', name: '弹药回收', desc: '击杀有 25% 概率补 1 发', rarity: 1, max: 3, icon: 'recycle', stats: { ammoRecycle: 0.25 } },
-    { id: 'airHunter', name: '空中猎手', desc: '空中伤害 +25%，空中移速 +10%', rarity: 1, max: 3, icon: 'air', stats: { airDamage: 0.25, airSpeed: 0.10 } },
-    { id: 'cluster', name: '弹片扩散', desc: '爆炸半径 +30%，爆炸伤害 +20%', rarity: 2, max: 2, icon: 'cluster', stats: { blastRadius: 0.30, blastDamage: 0.20 } },
-    { id: 'blastArmor', name: '防爆护甲', desc: '爆炸自伤 -40%（最多 -70%）', rarity: 1, max: 3, icon: 'shield', stats: { blastResist: 0.40 } }
+    { id: 'rocketFuel', name: '火箭燃料', desc: '燃料上限 +60%，落地回充 +60%', rarity: 0, max: 3, icon: 'fuel', stats: { jetFuel: 0.60, jetRegen: 0.60 }, tag: 'air' },
+    { id: 'blastMaster', name: '爆破专精', desc: '爆炸伤害 +25%，半径 +10%', rarity: 1, max: 4, icon: 'blast', stats: { blastDamage: 0.25, blastRadius: 0.10 }, tag: 'blast' },
+    { id: 'ammoRecycle', name: '弹药回收', desc: '击杀有 25% 概率补 1 发', rarity: 1, max: 3, icon: 'recycle', stats: { ammoRecycle: 0.25 }, tag: 'ammo' },
+    { id: 'airHunter', name: '空中猎手', desc: '空中伤害 +25%，空中移速 +10%', rarity: 1, max: 3, icon: 'air', stats: { airDamage: 0.25, airSpeed: 0.10 }, tag: 'air' },
+    { id: 'cluster', name: '弹片扩散', desc: '爆炸半径 +30%，爆炸伤害 +20%', rarity: 2, max: 2, icon: 'cluster', stats: { blastRadius: 0.30, blastDamage: 0.20 }, tag: 'blast' },
+    { id: 'blastArmor', name: '防爆护甲', desc: '爆炸自伤 -40%（最多 -70%）', rarity: 1, max: 3, icon: 'shield', stats: { blastResist: 0.40 }, tag: 'blast' },
+    { id: 'glassCannon', name: '玻璃大炮', desc: '伤害 +45%，生命上限 -20%', rarity: 1, max: 2, icon: 'damage', stats: { damage: 0.45, hpLoss: 0.20 } },
+    { id: 'overclock', name: '超频', desc: '射速 +35%，扩散 +40%', rarity: 1, max: 2, icon: 'rate', stats: { fireRate: 0.35, spread: 0.40 } },
+    { id: 'volatile', name: '爆裂弹头', desc: '命中 15% 概率引发小爆炸', rarity: 2, max: 2, icon: 'blast', tag: 'blast', stats: { volatile: 0.15 } },
+    { id: 'blastChain', name: '爆破炉心', desc: '爆炸击杀 30% 概率二次爆炸', rarity: 2, max: 1, icon: 'cluster', tag: 'blast', stats: { blastChain: 0.30 } },
+    { id: 'ammoPrinter', name: '弹药打印机', desc: '每 5 秒补 1 发当前武器', rarity: 1, max: 2, icon: 'ammo', tag: 'ammo', stats: { ammoPrint: 1 } },
+    { id: 'leechPct', name: '吸血力场', desc: '击杀回复 1.5% 最大生命', rarity: 2, max: 2, icon: 'leech', tag: 'blood', stats: { leechPct: 0.015 } },
+    { id: 'adrenaline', name: '肾上腺素', desc: '生命低于 40% 时伤害 +30%', rarity: 1, max: 2, icon: 'hp', tag: 'blood', stats: { adrenaline: 0.30 } },
+    { id: 'lastStand', name: '背水一战', desc: '生命低于 30% 时受伤 -30%', rarity: 1, max: 2, icon: 'shield', tag: 'blood', stats: { lastStand: 0.30 } }
   ];
 
   var RARITY = ['普通', '稀有', '史诗'];
@@ -86,19 +94,50 @@
     return out;
   }
 
+  var TAG_NAMES = { blast: '爆破', air: '空军', ammo: '弹药', blood: '血怒' };
+
   function apply(player, card, levels) {
     levels = levels || {};
     var lv = levelOf(card.id, levels);
     if (lv >= card.max) return false;
     levels[card.id] = lv + 1;
     var s = card.stats;
+    if (s.hpLoss) {
+      player.maxHp = Math.max(30, Math.round(player.maxHp * (1 - s.hpLoss)));
+      if (player.hp > player.maxHp) player.hp = player.maxHp;
+    }
     if (s.maxHp) player.maxHp += s.maxHp;
     if (s.heal) player.heal(s.heal);
     for (var k in s) {
-      if (k === 'maxHp' || k === 'heal') continue;
+      if (k === 'maxHp' || k === 'heal' || k === 'hpLoss') continue;
       player.mods[k] = (player.mods[k] || 0) + s[k];
     }
-    if (player.hp > player.maxHp) player.hp = player.maxHp;
+    if (card.tag) {
+      var counts = {};
+      for (var i = 0; i < POOL.length; i++) {
+        var pc = POOL[i];
+        if (pc.tag) counts[pc.tag] = (counts[pc.tag] || 0) + (levels[pc.id] || 0);
+      }
+      player.setFlags = player.setFlags || {};
+      var sets = {
+        blast: { 3: { blastRadius: 0.15 }, 6: { blastDamage: 0.20 } },
+        air: { 3: { jetAir: 3 }, 6: { airDamage: 0.15 } },
+        ammo: { 3: { ammo: 0.25 }, 6: { ammoRecycle: 0.15 } },
+        blood: { 3: { lifesteal: 1 }, 6: { lifesteal: 2 } }
+      };
+      var spec = sets[card.tag];
+      var count = counts[card.tag] || 0;
+      if (spec) {
+        for (var th in spec) {
+          var flag = card.tag + th;
+          if (count >= Number(th) && !player.setFlags[flag]) {
+            player.setFlags[flag] = true;
+            for (var mk in spec[th]) player.mods[mk] = (player.mods[mk] || 0) + spec[th][mk];
+            player.setToast = TAG_NAMES[card.tag] + ' ' + th;
+          }
+        }
+      }
+    }
     player.syncMods();
     return true;
   }
@@ -106,6 +145,7 @@
   G.upgrades = {
     POOL: POOL,
     RARITY: RARITY,
+    TAG_NAMES: TAG_NAMES,
     weights: weights,
     levelOf: levelOf,
     roll: roll,

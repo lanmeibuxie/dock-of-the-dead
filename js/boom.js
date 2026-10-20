@@ -2,6 +2,7 @@
 (function () {
   'use strict';
   var G = globalThis.G;
+  var queued = [];
 
   function queue(booms, z) {
     if (!z || z.boomQueued || z.exploded) return;
@@ -32,9 +33,12 @@
       var out = z.hit('torso', dmg, z.x < bx ? -1 : 1, 'explosion', null, 1.2);
       if (out.killed) {
         if (ctx.stats) ctx.stats.kills++;
-        if (ctx.addScore) ctx.addScore((z.def.score || 10) * (ctx.elite ? 2 : 1));
+        if (ctx.addScore) ctx.addScore((z.def.score || 10) * (ctx.elite ? 2 : 1) * (ctx.scoreMult || 1));
         if (ctx.player.mods && ctx.player.mods.lifesteal) ctx.player.heal(ctx.player.mods.lifesteal);
         if (z.type === 'bomber' && ctx.queueBoom) ctx.queueBoom(z);
+        if (ctx.player.mods && ctx.player.mods.blastChain && opt.chain !== false && G.chance(ctx.player.mods.blastChain)) {
+          queueBlast(ctx, z.x, z.y - 20, 38, 18);
+        }
         ctx.particles.spawnBlood(z.x, z.y - 20, 1, 12);
       }
     }
@@ -78,6 +82,10 @@
     });
   }
 
+  function queueBlast(ctx, x, y, radius, damage) {
+    queued.push({ ctx: ctx, x: x, y: y, radius: radius, damage: damage, t: 0.12 });
+  }
+
   function update(booms, dt, ctx) {
     for (var i = booms.length - 1; i >= 0; i--) {
       booms[i].t -= dt;
@@ -86,7 +94,17 @@
         booms.splice(i, 1);
       }
     }
+    for (var q = queued.length - 1; q >= 0; q--) {
+      queued[q].t -= dt;
+      if (queued[q].t <= 0) {
+        var b = queued[q];
+        blastAt(b.x, b.y, b.ctx, { radius: b.radius, damage: b.damage, self: false, chain: false });
+        queued.splice(q, 1);
+      }
+    }
   }
 
-  G.boom = { queue: queue, explode: explode, blastAt: blastAt, update: update };
+  function reset() { queued.length = 0; }
+
+  G.boom = { queue: queue, explode: explode, blastAt: blastAt, update: update, queueBlast: queueBlast, reset: reset };
 })();

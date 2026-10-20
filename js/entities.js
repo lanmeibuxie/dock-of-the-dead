@@ -36,6 +36,13 @@
     this.dead = false;
     this.deathT = 0;
     this.severedCount = 0;
+    if (def.boss) {
+      this.slamCd = 2.0;
+      this.crateCd = 3.5;
+      this.spitCd = 1.4;
+      this.summonCd = 5;
+      this.slamT = 0;
+    }
   }
 
   Zombie.prototype.hitBoxes = function () {
@@ -56,6 +63,12 @@
     if (this.state === 'attack' || this.state === 'lunge') {
       armF = f > 0 ? -0.7 : Math.PI + 0.7;
       armB = f > 0 ? -0.35 : Math.PI + 0.35;
+    }
+    if (this.state === 'slam') {
+      armF = f > 0 ? -1.5 : Math.PI + 1.5;
+      armB = f > 0 ? -1.2 : Math.PI + 1.2;
+      legF = 0.2;
+      legB = -0.2;
     }
     if (this.state === 'climb') {
       armF = f > 0 ? -1.3 : Math.PI + 1.3;
@@ -117,6 +130,11 @@
       this.stagger -= dt;
       this.x += this.knockVx * dt;
       this.knockVx *= Math.pow(0.0008, dt);
+      return;
+    }
+
+    if (this.def.boss) {
+      this.updateBoss(dt, player);
       return;
     }
 
@@ -187,12 +205,69 @@
     }
   };
 
+  Zombie.prototype.updateBoss = function (dt, player) {
+    var dx = player.x - this.x;
+    var dist = Math.abs(dx);
+    this.facing = dx >= 0 ? 1 : -1;
+    if (this.state === 'slam') {
+      this.slamT -= dt;
+      if (this.slamT <= 0) {
+        G.hazards.spawnShockwave(this.x, 1);
+        G.hazards.spawnShockwave(this.x, -1);
+        G.gfx.cam.shake(2.2);
+        this.state = 'walk';
+      }
+      return;
+    }
+    if (this.type === 'crane') {
+      this.slamCd -= dt;
+      this.crateCd -= dt;
+      if (this.slamCd <= 0 && dist < 135) {
+        this.state = 'slam';
+        this.slamT = 0.85;
+        this.slamCd = 3.4;
+        G.gfx.cam.shake(1.2);
+        return;
+      }
+      if (this.crateCd <= 0) {
+        G.hazards.spawnCrate(player.x);
+        this.crateCd = 5.5;
+      }
+    } else {
+      this.spitCd -= dt;
+      this.summonCd -= dt;
+      if (this.spitCd <= 0 && dist < 300) {
+        for (var i = -1; i <= 1; i++) {
+          var a = Math.atan2((player.y - 22) - (this.y - 42), player.x - this.x) + i * 0.12;
+          G.hazards.spawnAcid(this.x, this.y - 42, a);
+        }
+        this.spitCd = 2.8;
+      }
+      if (this.summonCd <= 0) {
+        if (G.game.summonCrawlers) G.game.summonCrawlers(3);
+        this.summonCd = 9;
+      }
+    }
+    if (dist > 55) {
+      this.x += this.facing * this.speed * dt;
+      this.walkPhase += dt * 4;
+    }
+    if (dist < 46 && this.attackCd <= 0) {
+      if (player.takeDamage(this.damage, this.facing)) {
+        G.gfx.cam.shake(1.4);
+        G.particles.spawnBlood(player.x, player.y - 22, this.facing, 8);
+      }
+      this.attackCd = 1.6;
+    }
+    this.x = G.clamp(this.x, 20, G.level.layout.length - 20);
+  };
+
   Zombie.prototype.hit = function (zone, damage, dirX, weapon, ref, knockScale) {
     if (this.dead) return { killed: false, headshot: zone === 'head', severed: false, damage: 0 };
     this.hp -= damage;
     this.flash = 0.06;
-    this.stagger = Math.max(this.stagger, (weapon === 'shotgun' ? 0.26 : weapon === 'smg' ? 0.09 : 0.14) * (this.def.resist ? 0.7 : 1));
-    this.knockVx = (dirX || 1) * (weapon === 'shotgun' ? 190 : weapon === 'pistol' ? 95 : 58) * (this.def.resist || 1) * (knockScale || 1);
+    this.stagger = Math.max(this.stagger, (weapon === 'shotgun' ? 0.26 : weapon === 'smg' ? 0.09 : 0.14) * (this.def.resist ? 0.7 : 1) * (this.def.boss ? 0.16 : 1));
+    this.knockVx = (dirX || 1) * (weapon === 'shotgun' ? 190 : weapon === 'pistol' ? 95 : 58) * (this.def.resist || 1) * (knockScale || 1) * (this.def.boss ? 0.08 : 1);
     this.state = 'walk';
     this.windupT = 0;
     this.recoverT = 0;
@@ -221,6 +296,12 @@
   Zombie.prototype.draw = function (ctx) {
     var sx = G.gfx.cam.toScreenX(this.x);
     var sy = G.gfx.cam.toScreenY(this.y + this.yOff);
+    if (this.def.boss && !this.dead) {
+      ctx.fillStyle = 'rgba(220,60,50,0.08)';
+      ctx.beginPath();
+      ctx.arc(sx, sy - 34, 34, 0, Math.PI * 2);
+      ctx.fill();
+    }
     if (this.type === 'bomber' && !this.dead) {
       var pulse = 0.5 + 0.5 * Math.sin((G.level.time || 0) * (this.state === 'fuse' ? 24 : 8));
       ctx.fillStyle = 'rgba(150,220,90,' + (0.06 + 0.12 * pulse) + ')';

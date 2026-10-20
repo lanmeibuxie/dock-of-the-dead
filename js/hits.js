@@ -49,6 +49,9 @@
     ctx.onHit(out.killed, !!shot.crit, res.headshot);
 
     if (shot.crit) ctx.particles.spawnSparks(hx, hy, dir, 5);
+    if (ctx.player.mods.volatile && G.chance(ctx.player.mods.volatile)) {
+      G.boom.queueBlast(ctx, hx, hy, 26, 12);
+    }
     ctx.particles.spawnBlood(hx, hy, dir, res.headshot ? 34 : 14);
     ctx.level.addBlood(hx, gy + G.rand(1, 8), res.headshot ? 9 : 5, dir);
     if (res.headshot) ctx.particles.spawnBone(hx, hy, dir, 7);
@@ -64,7 +67,8 @@
       ctx.stats.kills++;
       if (ctx.player.mods.lifesteal) ctx.player.heal(ctx.player.mods.lifesteal);
       if (ctx.player.mods.ammoRecycle && G.chance(ctx.player.mods.ammoRecycle)) ctx.player.recycleAmmo();
-      ctx.addScore((z.def.score || 10) * (ctx.elite ? 2 : 1));
+      if (ctx.player.mods.leechPct) ctx.player.heal(Math.max(1, Math.round(ctx.player.maxHp * ctx.player.mods.leechPct)));
+      ctx.addScore((z.def.score || 10) * (ctx.elite ? 2 : 1) * (ctx.scoreMult || 1));
       if (G.chance(0.06)) ctx.spawnLoot(z.x);
       if (res.headshot) {
         z.hide.head = true;
@@ -100,7 +104,7 @@
     if (ctx.particles.spawnFeather) ctx.particles.spawnFeather(bird.x, bird.y, dir, 5);
     if (out.killed) {
       ctx.stats.kills++;
-      ctx.addScore((bird.def.score || 12) * (ctx.elite ? 2 : 1));
+      ctx.addScore((bird.def.score || 12) * (ctx.elite ? 2 : 1) * (ctx.scoreMult || 1));
       if (ctx.player.mods.lifesteal) ctx.player.heal(ctx.player.mods.lifesteal);
     }
   }

@@ -37,6 +37,8 @@
       crawler: { id: 'crawler', hp: 28, speed: 78, damage: 8, reach: 18, attackRate: 0.9, windup: 0.22, width: 16, height: 14, score: 12 },
       brute: { id: 'brute', hp: 260, speed: 24, damage: 26, reach: 26, attackRate: 1.6, windup: 0.6, width: 24, height: 58, resist: 0.5, score: 50 },
       runner: { id: 'runner', hp: 38, speed: 100, damage: 9, reach: 16, attackRate: 0.9, windup: 0.16, width: 12, height: 34, score: 15 },
+      crane: { id: 'crane', boss: true, bossName: '吊机尸', hp: 900, speed: 18, damage: 28, reach: 34, attackRate: 2.5, windup: 0.8, width: 34, height: 76, resist: 1, score: 400 },
+      drownedBoss: { id: 'drownedBoss', boss: true, bossName: '巨溺者', hp: 1000, speed: 22, damage: 24, reach: 30, attackRate: 2, windup: 0.6, width: 30, height: 70, resist: 1, score: 450 },
       bomber: { id: 'bomber', hp: 70, speed: 30, damage: 26, reach: 26, attackRate: 2, windup: 0.5, width: 18, height: 40, score: 25, fuse: 0.7, bombRadius: 60, chainRadius: 50, chainDamage: 45 }
     }
   };

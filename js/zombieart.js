@@ -7,6 +7,8 @@
   var DW = { z: '#7f9ba4', d: '#5d747c', e: '#d8f0e0', n: '#223a44', m: '#8a7a55', w: '#3f5a34', b: '#1a262c', r: '#6f1a22', h: '#c9a23a', y: '#b8892f', k: '#7d5a1a', g: '#9acb5a' };
   var ST = { h: '#c9b23a', s: '#7c8a72', d: '#5a6653', e: '#f2e9b0', v: '#b05a1e', a: '#3a2e24', b: '#241e18', m: '#9aa8a0', r: '#7a1a22', z: '#7c8a72', g: '#9acb5a' };
   var SV = { r: '#a8242e', s: '#8a9782', d: '#646f5c', e: '#f2e9b0', c: '#2a3a56', v: '#c96a1e', b: '#1e2228', h: '#c9a23a', y: '#b8892f', k: '#7d5a1a', m: '#8a7a55', w: '#3f5a34', g: '#9acb5a' };
+  var CR = { h: '#c9b23a', s: '#7c8a72', d: '#5a6653', e: '#ffdf7a', v: '#b05a1e', a: '#3a2e24', b: '#241e18', m: '#9aa8a0', r: '#7a1a22', z: '#7c8a72', g: '#9acb5a' };
+  var DB = { z: '#6f8f78', d: '#516b58', e: '#d8f0e0', n: '#1c3a34', m: '#8a7a55', w: '#3f5a34', b: '#152420', r: '#6f1a22', h: '#c9a23a', y: '#b8892f', k: '#7d5a1a', g: '#9acb5a' };
   var OB = { o: '#5a5a2a', z: '#a8b06a', d: '#7d844e', e: '#e8ffb0', g: '#9acb5a', r: '#7a3a1e', b: '#2e2a24', m: '#7d844e', h: '#c9a23a', y: '#b8892f', k: '#7d5a1a', w: '#3f5a34' };
 
   function P(name, art, pal, pivot, scale) {
@@ -187,7 +189,9 @@
     crawler: { pal: DW, torso: drownedTorso, head: drownedHead, headPivot: [5, 9], torsoPivot: [6, 13], arm: 'drowned', leg: 'drowned', scale: 1 },
     brute: { pal: ST, torso: steveTorso, head: steveHead, headPivot: [6, 9], torsoPivot: [6, 14], arm: 'steve', leg: 'steve', scale: 2 },
     runner: { pal: SV, torso: sailorTorso, head: sailorHead, headPivot: [5, 9], torsoPivot: [6, 13], arm: 'sailor', leg: 'sailor', scale: 1 },
-    bomber: { pal: OB, torso: oilTorso, head: oilHead, headPivot: [6, 10], torsoPivot: [6, 14], arm: 'oil', leg: 'oil', scale: 1, tank: oilTank }
+    bomber: { pal: OB, torso: oilTorso, head: oilHead, headPivot: [6, 10], torsoPivot: [6, 14], arm: 'oil', leg: 'oil', scale: 1, tank: oilTank },
+    crane: { pal: CR, torso: steveTorso, head: steveHead, headPivot: [6, 9], torsoPivot: [6, 14], arm: 'steve', leg: 'steve', scale: 2 },
+    drownedBoss: { pal: DB, torso: drownedTorso, head: drownedHead, headPivot: [5, 9], torsoPivot: [6, 13], arm: 'drowned', leg: 'drowned', scale: 2 }
   };
 
   var cache = {};
