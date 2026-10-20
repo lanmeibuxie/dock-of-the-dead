@@ -201,6 +201,18 @@
       tone('square', 1100, 720, 0.05, 0.12, 0, 0.15);
     },
 
+    magOut: function () {
+      if (!ctx) return;
+      tone('square', 520, 260, 0.06, 0.12);
+      burst(0.04, 'highpass', 900, 0.7, 0.1);
+    },
+
+    magIn: function () {
+      if (!ctx) return;
+      tone('square', 900, 1300, 0.06, 0.14);
+      tone('square', 620, 620, 0.03, 0.09, 0, 0.05);
+    },
+
     shell: function () {
       if (!ctx) return;
       tone('triangle', 1750, 900, 0.05, 0.09);

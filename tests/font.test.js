@@ -3,6 +3,7 @@ const assert = require('node:assert');
 require('../js/core.js');
 require('../js/gfx.js');
 require('../js/level.js');
+require('../js/weapons.js');
 require('../js/player.js');
 require('../js/upgrades.js');
 require('../js/cnfont.js');

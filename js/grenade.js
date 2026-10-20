@@ -3,7 +3,7 @@
   'use strict';
   var G = globalThis.G;
 
-  function Grenade(x, y, angle, damage) {
+  function Grenade(x, y, angle, damage, radius) {
     var def = G.content.weapons.launcher;
     this.x = x;
     this.y = y;
@@ -12,7 +12,7 @@
     this.vx = Math.cos(angle) * def.projectileSpeed;
     this.vy = Math.sin(angle) * def.projectileSpeed;
     this.damage = damage;
-    this.radius = def.blastRadius;
+    this.radius = radius || def.blastRadius;
     this.life = def.fuse;
     this.dead = false;
     this.smoke = 0;

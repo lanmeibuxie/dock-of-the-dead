@@ -3,52 +3,7 @@
   'use strict';
   var G = globalThis.G;
 
-  function Weapon(id) {
-    var def = G.content.weapons[id];
-    this.id = id;
-    this.def = def;
-    this.ammo = def.mag;
-    this.reserve = def.reserve;
-    this.reloading = false;
-    this.reloadT = 0;
-    this.nextFire = 0;
-    this.rateMult = 1;
-    this.reloadMult = 1;
-    this.magSize = def.mag;
-  }
-
-  Weapon.prototype.update = function (dt) {
-    if (this.reloading) {
-      this.reloadT -= dt;
-      if (this.reloadT <= 0) this.finishReload();
-    }
-  };
-
-  Weapon.prototype.tryFire = function (now) {
-    if (this.reloading || now < this.nextFire || this.ammo <= 0) return false;
-    this.ammo--;
-    this.nextFire = now + this.def.rate / this.rateMult;
-    return true;
-  };
-
-  Weapon.prototype.startReload = function () {
-    if (this.reloading) return false;
-    if (this.ammo >= this.magSize) return false;
-    if (this.reserve <= 0) return false;
-    this.reloading = true;
-    this.reloadT = this.def.reload / this.reloadMult;
-    return true;
-  };
-
-  Weapon.prototype.finishReload = function () {
-    var need = Math.max(0, this.magSize - this.ammo);
-    var take = Math.min(need, this.reserve);
-    this.ammo += take;
-    if (this.reserve !== Infinity) this.reserve -= take;
-    this.reloading = false;
-    this.reloadT = 0;
-  };
-
+  var Weapon = G.weapons.Weapon;
   function Player(x) {
     var L = G.level.layout || G.level.build();
     this.x = x;
@@ -85,7 +40,8 @@
     this.mods = {
       damage: 0, fireRate: 0, reload: 0, mag: 0, speed: 0, crit: 0, critMult: 2,
       pierce: 0, knock: 0, lifesteal: 0, pickup: 0, ammo: 0, recoil: 0,
-      jetFuel: 0, jetThrust: 0, jetRegen: 0, jetAir: 0, blastResist: 0
+      jetFuel: 0, jetThrust: 0, jetRegen: 0, jetAir: 0, blastResist: 0,
+      blastDamage: 0, blastRadius: 0, ammoRecycle: 0, airDamage: 0, airSpeed: 0
     };
     this.fuel = G.JET.maxFuel;
     this.maxFuel = G.JET.maxFuel;
@@ -95,6 +51,7 @@
     this.blastResist = 0;
     this.thrusting = false;
     this.wasThrusting = false;
+    this.reloadFx = { out: false, in: false, slam: false };
     this.syncMods();
   }
 
@@ -118,6 +75,11 @@
     m.jetRegen = Math.min(3, m.jetRegen);
     m.jetAir = Math.min(30, m.jetAir);
     m.blastResist = Math.min(0.7, m.blastResist);
+    m.blastDamage = Math.min(1, m.blastDamage);
+    m.blastRadius = Math.min(0.8, m.blastRadius);
+    m.ammoRecycle = Math.min(0.6, m.ammoRecycle);
+    m.airDamage = Math.min(0.6, m.airDamage);
+    m.airSpeed = Math.min(0.4, m.airSpeed);
     var newMax = G.JET.maxFuel * (1 + m.jetFuel);
     if (newMax > this.maxFuel) this.fuel = Math.min(newMax, this.fuel + (newMax - this.maxFuel));
     this.maxFuel = newMax;
@@ -137,8 +99,15 @@
 
   Player.prototype.speedScale = function () {
     var s = 1 + this.mods.speed;
+    if (!this.onGround) s *= 1 + this.mods.airSpeed;
     if (this.current === 'minigun') s *= 1 - 0.35 * this.spin;
     return s;
+  };
+
+  Player.prototype.recycleAmmo = function () {
+    var w = this.weapon();
+    if (w.ammo < w.magSize) w.ammo++;
+    else if (w.reserve !== Infinity) w.reserve++;
   };
 
   Player.prototype.stepSpin = function (dt, holding) {
@@ -165,6 +134,10 @@
   };
 
   Player.prototype.pose = function () {
+    var w = this.weapon();
+    var reloading = w.reloading;
+    var rp = reloading ? 1 - w.reloadT / w.def.reload : 0;
+    var dip = reloading ? Math.sin(Math.min(1, rp) * Math.PI) * 0.62 : 0;
     var swing = this.moving && this.onGround ? Math.sin(this.walkPhase) * 0.55 : 0.05;
     var bob = this.moving && this.onGround ? Math.round(Math.abs(Math.sin(this.walkPhase)) * -1) : 0;
     var legF = swing + 0.05;
@@ -174,14 +147,15 @@
     return {
       aim: this.aim,
       facing: this.facing,
-      armF: this.aim,
-      armB: this.aim + 0.22,
+      armF: this.aim + dip,
+      armB: reloading ? this.aim + dip - 0.55 + 1.2 * Math.sin(Math.min(1, rp) * Math.PI) : this.aim + 0.22,
       legF: legF,
       legB: legB,
       gun: this.current,
-      flash: this.flash > 0 ? 1 : 0,
+      flash: reloading ? 0 : (this.flash > 0 ? 1 : 0),
       recoil: this.recoil,
       spin: this.spin,
+      gunSpin: reloading ? rp * Math.PI * 2 : 0,
       bob: bob,
       torsoAngle: 0
     };
@@ -272,7 +246,31 @@
     if ((G.input.pressed('KeyR') || G.input.pressed('ShiftLeft') || G.input.pressed('ShiftRight')) && w.startReload()) {
       this.reloadRequested = true;
       this.spin = 0;
+      this.reloadFx = { out: false, in: false, slam: false };
       if (G.audio) G.audio.reload();
+    }
+    if (w.reloading) {
+      var rp = 1 - w.reloadT / w.def.reload;
+      if (rp >= 0.24 && !this.reloadFx.out) {
+        this.reloadFx.out = true;
+        var po = this.points();
+        if (G.particles) {
+          G.particles.spawnMag(po.handX, po.handY, this.facing);
+          G.particles.spawnSparks(po.handX, po.handY, this.facing, 2);
+        }
+        if (G.audio) G.audio.magOut();
+      }
+      if (rp >= 0.62 && !this.reloadFx.in) {
+        this.reloadFx.in = true;
+        if (G.audio) G.audio.magIn();
+      }
+      if (rp >= 0.88 && !this.reloadFx.slam) {
+        this.reloadFx.slam = true;
+        var ps = this.points();
+        if (G.particles) G.particles.spawnSparks(ps.handX, ps.handY, this.facing, 4);
+        if (G.audio) G.audio.magIn();
+        G.gfx.cam.shake(0.35);
+      }
     }
 
     this.recoil = Math.max(0, this.recoil - dt * 26);
@@ -296,6 +294,7 @@
     var pellets = def.pellets;
     var angles = [];
     var crits = [];
+    var airBoost = this.onGround ? 0 : this.mods.airDamage;
     if (this.current === 'launcher') {
       var gx = this.x + Math.cos(this.aim) * 10;
       var gy = this.y - 23 + Math.sin(this.aim) * 10;
@@ -303,8 +302,9 @@
       this.recoil = Math.min(10, this.recoil + def.recoil * (1 + this.mods.recoil));
       return {
         weapon: 'launcher', grenade: true, x: gx, y: gy, angle: this.aim,
-        damage: def.damage * (1 + this.mods.damage), angles: [this.aim], crits: [false],
-        pierce: 0, knockScale: 1 + this.mods.knock
+        damage: def.damage * (1 + this.mods.damage + airBoost + this.mods.blastDamage),
+        radius: def.blastRadius * (1 + this.mods.blastRadius),
+        angles: [this.aim], crits: [false], pierce: 0, knockScale: 1 + this.mods.knock
       };
     }
     if (pellets === 1) {
@@ -320,7 +320,7 @@
     this.flash = 0.06;
     this.recoil = Math.min(10, this.recoil + def.recoil * (1 + this.mods.recoil));
     this.hurtT = Math.max(this.hurtT, 0);
-    var amount = def.damage * (1 + this.mods.damage);
+    var amount = def.damage * (1 + this.mods.damage + airBoost);
     return {
       weapon: this.current,
       angles: angles,
@@ -364,6 +364,40 @@
     ctx.fillRect(bx + 1, Math.round(sy - 30), 3, 1);
     var pose = this.pose();
     G.sprites.drawRig(ctx, G.sprites.playerRig, pose, sx, sy);
+    var w = this.weapon();
+    if (w.reloading) {
+      var rp = 1 - w.reloadT / w.def.reload;
+      var pp = G.sprites.rigPoints(G.sprites.playerRig, pose, sx, sy);
+      if (rp > 0.42 && rp < 0.94) {
+        var t = (rp - 0.42) / 0.52;
+        var mx = Math.round(pp.handX);
+        var my = Math.round(pp.handY + (1 - t) * 11);
+        ctx.fillStyle = '#2a3020';
+        ctx.fillRect(mx - 3, my - 2, 6, 7);
+        ctx.fillStyle = '#b08a3a';
+        ctx.fillRect(mx - 3, my - 2, 6, 2);
+        ctx.fillStyle = '#6a5a2a';
+        ctx.fillRect(mx - 1, my + 1, 2, 3);
+      }
+      var orbA = Math.min(1, Math.max(0, (rp - 0.18) / 0.7));
+      if (orbA > 0) {
+        ctx.globalAlpha = 0.5 + 0.5 * Math.sin(rp * 20);
+        for (var oi = 0; oi < 6; oi++) {
+          var oa = oi / 6 * Math.PI * 2 + rp * 5;
+          var orad = 14 - orbA * 9;
+          ctx.fillStyle = oi % 2 ? '#e6d18a' : '#ffc46b';
+          ctx.fillRect(Math.round(pp.handX + Math.cos(oa) * orad), Math.round(pp.handY + Math.sin(oa) * orad), 1, 1);
+        }
+        ctx.globalAlpha = 1;
+      }
+      if (rp > 0.86) {
+        ctx.fillStyle = 'rgba(255,240,190,0.9)';
+        ctx.fillRect(Math.round(pp.handX) - 7, Math.round(pp.handY), 15, 1);
+        ctx.fillRect(Math.round(pp.handX), Math.round(pp.handY) - 7, 1, 15);
+        ctx.fillStyle = 'rgba(255,196,107,0.7)';
+        ctx.fillRect(Math.round(pp.handX) - 3, Math.round(pp.handY) - 3, 7, 7);
+      }
+    }
     if (this.thrusting) {
       var fl = 4 + Math.floor(Math.random() * 5);
       ctx.fillStyle = '#ff9e3d';
@@ -379,50 +413,6 @@
     }
   };
 
-  function Shot(x, y, angle, damage, weapon, knock, opts) {
-    opts = opts || {};
-    this.crit = !!opts.crit;
-    this.pierce = opts.pierce || 0;
-    this.knockScale = opts.knockScale || 1;
-    this.hitList = [];
-    this.x = x;
-    this.y = y;
-    this.angle = angle;
-    this.speed = weapon === 'shotgun' ? 1250 : weapon === 'smg' ? 1500 : 1600;
-    this.damage = damage;
-    this.weapon = weapon;
-    this.knock = knock;
-    this.life = 0.7;
-    this.dead = false;
-    this.px = x;
-    this.py = y;
-  }
-
-  Shot.prototype.update = function (dt) {
-    var L = G.level.layout;
-    this.px = this.x;
-    this.py = this.y;
-    this.x += Math.cos(this.angle) * this.speed * dt;
-    this.y += Math.sin(this.angle) * this.speed * dt;
-    this.life -= dt;
-    if (this.life <= 0 || this.x < 0 || this.x > L.length || this.y > L.groundY + 2) this.dead = true;
-  };
-
-  Shot.prototype.draw = function (ctx) {
-    var sx = G.gfx.cam.toScreenX(this.x);
-    var sy = G.gfx.cam.toScreenY(this.y);
-    var tx = this.x - Math.cos(this.angle) * 12;
-    var ty = this.y - Math.sin(this.angle) * 12;
-    ctx.strokeStyle = this.weapon === 'shotgun' ? 'rgba(255,205,130,0.85)' : 'rgba(255,228,160,0.9)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(G.gfx.cam.toScreenX(tx), G.gfx.cam.toScreenY(ty));
-    ctx.lineTo(sx, sy);
-    ctx.stroke();
-  };
-
   G.entities = G.entities || {};
-  G.entities.Weapon = Weapon;
   G.entities.Player = Player;
-  G.entities.Shot = Shot;
 })();

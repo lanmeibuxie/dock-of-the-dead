@@ -3,6 +3,7 @@ const assert = require('node:assert');
 require('../js/core.js');
 require('../js/gfx.js');
 require('../js/level.js');
+require('../js/weapons.js');
 require('../js/player.js');
 require('../js/upgrades.js');
 const G = globalThis.G;
@@ -64,16 +65,24 @@ test('crit/steady cards change combat stats', () => {
   assert.ok(Math.abs(p.mods.fireRate - 0.05) < 1e-9);
 });
 
-test('jetpack cards raise fuel, thrust and armor caps', () => {
+test('new rocket and blast cards change combat stats', () => {
   const p = new G.entities.Player(300);
-  const fuel = G.upgrades.POOL.find(c => c.id === 'fuelTank');
-  const turbo = G.upgrades.POOL.find(c => c.id === 'jetTurbo');
+  const fuel = G.upgrades.POOL.find(c => c.id === 'rocketFuel');
   const armor = G.upgrades.POOL.find(c => c.id === 'blastArmor');
+  const air = G.upgrades.POOL.find(c => c.id === 'airHunter');
   G.upgrades.apply(p, fuel, {});
-  assert.strictEqual(p.maxFuel, 125);
-  assert.strictEqual(p.fuel, 125);
-  G.upgrades.apply(p, turbo, {});
-  assert.ok(p.jetThrust > G.JET.thrust);
+  assert.strictEqual(p.maxFuel, 160);
+  assert.strictEqual(p.fuel, 160);
   for (let i = 0; i < 5; i++) G.upgrades.apply(p, armor, {});
   assert.ok(p.blastResist <= 0.7 + 1e-9);
+  G.upgrades.apply(p, air, {});
+  assert.ok(p.mods.airDamage > 0.2);
+});
+
+test('ammo recycle restores a round', () => {
+  const p = new G.entities.Player(300);
+  p.current = 'minigun';
+  p.weapon().ammo = 100;
+  p.recycleAmmo();
+  assert.strictEqual(p.weapon().ammo, 101);
 });

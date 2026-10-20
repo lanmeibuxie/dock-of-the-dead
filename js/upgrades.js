@@ -25,12 +25,12 @@
     { id: 'hunter', name: '尸潮猎手', desc: '伤害 +20%，换弹 +10%', rarity: 2, max: 3, icon: 'hunter', stats: { damage: 0.20, reload: 0.10 } },
     { id: 'undying', name: '不灭意志', desc: '生命上限 +30，击杀回复 1', rarity: 2, max: 3, icon: 'undying', stats: { maxHp: 30, lifesteal: 1 } },
 
-    { id: 'fuelTank', name: '燃料扩容', desc: '喷气燃料上限 +25%', rarity: 0, max: 6, icon: 'fuel', stats: { jetFuel: 0.25 } },
-    { id: 'jetNozzle', name: '强化喷嘴', desc: '喷气推力 +15%', rarity: 0, max: 5, icon: 'thruster', stats: { jetThrust: 0.15 } },
-    { id: 'jetRecharge', name: '快速回充', desc: '落地回充速度 +30%', rarity: 0, max: 5, icon: 'recharge', stats: { jetRegen: 0.30 } },
-    { id: 'airIntake', name: '空中回充', desc: '空中每秒回复 6 点燃料', rarity: 1, max: 2, icon: 'wings', stats: { jetAir: 6 } },
-    { id: 'blastArmor', name: '防爆护甲', desc: '爆炸自伤 -35%（最多 -70%）', rarity: 1, max: 3, icon: 'shield', stats: { blastResist: 0.35 } },
-    { id: 'jetTurbo', name: '涡轮增压', desc: '推力 +30%，燃料上限 +20%', rarity: 2, max: 2, icon: 'turbo', stats: { jetThrust: 0.30, jetFuel: 0.20 } }
+    { id: 'rocketFuel', name: '火箭燃料', desc: '燃料上限 +60%，落地回充 +60%', rarity: 0, max: 3, icon: 'fuel', stats: { jetFuel: 0.60, jetRegen: 0.60 } },
+    { id: 'blastMaster', name: '爆破专精', desc: '爆炸伤害 +25%，半径 +10%', rarity: 1, max: 4, icon: 'blast', stats: { blastDamage: 0.25, blastRadius: 0.10 } },
+    { id: 'ammoRecycle', name: '弹药回收', desc: '击杀有 25% 概率补 1 发', rarity: 1, max: 3, icon: 'recycle', stats: { ammoRecycle: 0.25 } },
+    { id: 'airHunter', name: '空中猎手', desc: '空中伤害 +25%，空中移速 +10%', rarity: 1, max: 3, icon: 'air', stats: { airDamage: 0.25, airSpeed: 0.10 } },
+    { id: 'cluster', name: '弹片扩散', desc: '爆炸半径 +30%，爆炸伤害 +20%', rarity: 2, max: 2, icon: 'cluster', stats: { blastRadius: 0.30, blastDamage: 0.20 } },
+    { id: 'blastArmor', name: '防爆护甲', desc: '爆炸自伤 -40%（最多 -70%）', rarity: 1, max: 3, icon: 'shield', stats: { blastResist: 0.40 } }
   ];
 
   var RARITY = ['普通', '稀有', '史诗'];

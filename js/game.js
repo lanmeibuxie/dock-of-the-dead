@@ -66,9 +66,9 @@
     return 'ammo_shotgun';
   }
 
-  function spawnLoot(x) {
+  function spawnLoot(x, kind) {
     var L = G.level.layout;
-    pickups.push(new G.entities.Pickup(lootKind(), G.clamp(x, 30, L.length - 30)));
+    pickups.push(new G.entities.Pickup(kind || lootKind(), G.clamp(x, 30, L.length - 30)));
   }
 
   function openUpgrade() {
@@ -78,7 +78,7 @@
     setState('upgrade');
     waveState = 'upgrade';
     bannerT = 0;
-    spawnLoot(player.x - 55);
+    spawnLoot(player.x - 55, 'ammo_all');
     spawnLoot(player.x + 65);
     if (G.audio) G.audio.foghorn();
   }
@@ -165,7 +165,7 @@
     var fired = player.fire();
     if (!fired) return;
     if (fired.grenade) {
-      grenades.push(new G.grenade.Grenade(fired.x, fired.y, fired.angle, fired.damage));
+      grenades.push(new G.grenade.Grenade(fired.x, fired.y, fired.angle, fired.damage, fired.radius));
       stats.shots++;
       G.gfx.cam.shake(0.5);
       if (G.audio) { G.audio.shot('launcher'); G.audio.shell(); }

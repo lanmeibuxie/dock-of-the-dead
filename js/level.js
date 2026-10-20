@@ -69,7 +69,14 @@
       return changed;
     },
 
-    theme: function () { return G.themes.get(this.themeMix); },
+    theme: function () {
+      var key = this.themeMix.toFixed(2);
+      if (this._themeKey !== key) {
+        this._themeKey = key;
+        this._theme = G.themes.get(this.themeMix);
+      }
+      return this._theme;
+    },
 
     reset: function () {
       this.build();
@@ -157,8 +164,16 @@
       ctx.fillStyle = this.skyGradient(ctx, T);
       ctx.fillRect(0, 0, G.W, 162);
 
+      if (day < 0.4) {
+        ctx.fillStyle = 'rgba(220,235,240,' + (0.35 * (1 - day / 0.4)) + ')';
+        for (var st = 0; st < 18; st++) {
+          var stx = (st * 97 + 31) % G.W;
+          var sty = 18 + (st * 53) % 70;
+          ctx.fillRect(stx, sty, 1, 1);
+        }
+      }
       var mx = 386 - camX * 0.03;
-      ctx.fillStyle = day > 0.5 ? 'rgba(255,230,170,0.16)' : 'rgba(150,180,175,0.08)';
+      ctx.fillStyle = day > 0.5 ? 'rgba(255,244,196,0.22)' : 'rgba(180,210,210,0.10)';
       ctx.beginPath();
       ctx.arc(mx, 46, 26, 0, Math.PI * 2);
       ctx.fill();
@@ -169,6 +184,22 @@
       ctx.fillStyle = day > 0.5 ? 'rgba(255,240,190,0.55)' : 'rgba(80,100,92,0.55)';
       ctx.fillRect(mx - 4, 43, 3, 2);
       ctx.fillRect(mx + 1, 48, 4, 2);
+
+      /* 云层 */
+      var night = 1 - day;
+      var cloudA = 0.08 * night + 0.85 * day;
+      if (cloudA > 0.04) {
+        var cc = day > 0.5 ? '255,255,255' : '150,180,190';
+        for (var ci = 0; ci < 5; ci++) {
+          var cxp2 = ((ci * 140 - camX * 0.08 + t * (4 + ci)) % (G.W + 180)) - 90;
+          var cyp2 = 32 + (ci % 3) * 26;
+          ctx.fillStyle = 'rgba(' + cc + ',' + cloudA + ')';
+          ctx.fillRect(cxp2, cyp2 + 6, 54, 7);
+          ctx.fillRect(cxp2 + 8, cyp2, 30, 8);
+          ctx.fillRect(cxp2 + 20, cyp2 - 5, 20, 9);
+          ctx.fillRect(cxp2 + 44, cyp2 + 3, 18, 8);
+        }
+      }
 
       ctx.fillStyle = T.crane;
       for (var i = -1; i < 4; i++) {
@@ -378,7 +409,7 @@
           punch.call(this, lp.x - camX, lp.y + 6, lp.r * flick * 1.25);
         }
       }
-      punch.call(this, G.W / 2, G.H - 60, T.lamp > 0.5 ? 120 : 75);
+      punch.call(this, G.W / 2, G.H - 60, T.lamp > 0.5 ? 135 : 90);
       if (extra) {
         for (var e = 0; e < extra.length; e++) punch.call(this, extra[e].x - camX, extra[e].y, extra[e].r);
       }

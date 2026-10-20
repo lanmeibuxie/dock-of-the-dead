@@ -30,7 +30,7 @@
       launcher: { id: 'launcher', name: 'LAUNCHER', damage: 60, rate: 0.9, mag: 4, reserve: 12, pellets: 1, spread: 0, reload: 2.4, knock: 80, recoil: 2, muzzle: 18, blastRadius: 58, blastEdge: 25, projectileSpeed: 420, projectileGravity: 600, fuse: 1.4 }
     },
     birds: {
-      bird: { id: 'bird', hp: 18, speed: 90, diveSpeed: 260, damage: 8, score: 12, radius: 9 }
+      bird: { id: 'bird', hp: 18, speed: 100, diveSpeed: 300, damage: 10, score: 12, radius: 9 }
     },
     zombies: {
       walker: { id: 'walker', hp: 60, speed: 34, damage: 12, reach: 20, attackRate: 1.15, windup: 0.35, width: 14, height: 38, score: 10 },

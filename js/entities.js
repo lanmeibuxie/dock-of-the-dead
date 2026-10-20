@@ -266,10 +266,19 @@
       player.hp = Math.min(player.maxHp, player.hp + (p.amount || 30));
       return true;
     }
+    var ammoMult = 1 + (player.mods ? player.mods.ammo : 0);
+    if (p.kind === 'ammo_all') {
+      var all = { shotgun: 6, smg: 20, minigun: 60, launcher: 4 };
+      for (var wid in all) {
+        var wa = player.weapons[wid];
+        if (wa && wa.reserve !== Infinity) wa.reserve += Math.round(all[wid] * ammoMult);
+      }
+      return true;
+    }
     var map = { ammo_pistol: 'pistol', ammo_shotgun: 'shotgun', ammo_smg: 'smg', ammo_minigun: 'minigun', ammo_launcher: 'launcher' };
     var w = player.weapons[map[p.kind]];
     if (!w) return false;
-    if (w.reserve !== Infinity) w.reserve += Math.round((p.amount || 10) * (1 + (player.mods ? player.mods.ammo : 0)));
+    if (w.reserve !== Infinity) w.reserve += Math.round((p.amount || 10) * ammoMult);
     return true;
   }
 
@@ -279,7 +288,7 @@
     this.y = (G.level.layout || G.level.build()).groundY;
     this.t = G.rand(0, 6);
     this.life = 22;
-    this.amount = kind === 'medkit' ? 30 : kind === 'ammo_shotgun' ? 6 : kind === 'ammo_smg' ? 24 : kind === 'ammo_minigun' ? 60 : kind === 'ammo_launcher' ? 4 : 18;
+    this.amount = kind === 'medkit' ? 30 : kind === 'ammo_shotgun' ? 6 : kind === 'ammo_smg' ? 24 : kind === 'ammo_minigun' ? 80 : kind === 'ammo_launcher' ? 6 : kind === 'ammo_all' ? 0 : 18;
     this.dead = false;
   }
 
@@ -317,7 +326,7 @@
       ctx.fillStyle = '#8f8a7a';
       ctx.fillRect(sx - 5, sy + 1, 10, 1);
     } else {
-      var col = this.kind === 'ammo_shotgun' ? '#8e3a2a' : this.kind === 'ammo_smg' ? '#a8862c' : this.kind === 'ammo_minigun' ? '#6a5a3a' : this.kind === 'ammo_launcher' ? '#4a5a2a' : '#5a6260';
+      var col = this.kind === 'ammo_shotgun' ? '#8e3a2a' : this.kind === 'ammo_smg' ? '#a8862c' : this.kind === 'ammo_minigun' ? '#6a5a3a' : this.kind === 'ammo_launcher' ? '#4a5a2a' : this.kind === 'ammo_all' ? '#7a8a3a' : '#5a6260';
       ctx.fillStyle = col;
       ctx.fillRect(sx - 5, sy - 5, 10, 7);
       ctx.fillStyle = 'rgba(255,255,255,0.18)';

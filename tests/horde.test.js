@@ -3,6 +3,7 @@ const assert = require('node:assert');
 require('../js/core.js');
 require('../js/gfx.js');
 require('../js/level.js');
+require('../js/weapons.js');
 require('../js/player.js');
 require('../js/entities.js');
 require('../js/upgrades.js');
@@ -40,6 +41,15 @@ test('upgrade input selects then confirms', () => {
   assert.strictEqual(confirmed, 0);
 });
 
+test('clicking a selected card does not confirm', () => {
+  const cards = G.upgrades.roll(1, () => 0.1, {});
+  let confirmed = -1;
+  const noKeys = () => false;
+  const r = G.upgradeui.input(cards, 0, { x: 92, y: 136 }, true, noKeys, i => { confirmed = i; });
+  assert.strictEqual(r.selected, 0);
+  assert.strictEqual(confirmed, -1);
+});
+
 test('upgrade keyboard selects and enter confirms', () => {
   const cards = G.upgrades.roll(3, () => 0.6, {});
   let confirmed = -1;
@@ -60,4 +70,13 @@ test('day theme transitions over time', () => {
   G.level.update(0.8, 0);
   assert.strictEqual(G.level.themeMix, 1);
   assert.notStrictEqual(G.themes.get(0).skyTop, G.themes.get(1).skyTop);
+});
+
+test('ammo_all restores launcher and minigun reserves', () => {
+  const p = new G.entities.Player(300);
+  p.weapons.launcher.reserve = 0;
+  p.weapons.minigun.reserve = 0;
+  G.entities.applyPickup(p, { kind: 'ammo_all' });
+  assert.ok(p.weapons.launcher.reserve >= 4);
+  assert.ok(p.weapons.minigun.reserve >= 60);
 });

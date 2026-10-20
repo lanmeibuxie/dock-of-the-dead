@@ -97,6 +97,22 @@
         r(2, 6, 3, 2, '#ff9e3d'); r(5, 4, 3, 2, '#ffd166'); r(8, 2, 2, 2, '#fff2b0');
         r(1, 9, 10, 2, '#ffc46b');
         break;
+      case 'blast':
+        r(5, 1, 2, 3, '#ffd166'); r(3, 4, 6, 2, '#ff9e3d'); r(1, 6, 10, 3, '#c5202e');
+        r(3, 9, 6, 2, '#ff9e3d'); r(5, 10, 2, 2, '#fff2b0');
+        break;
+      case 'recycle':
+        r(2, 3, 7, 2, '#7fff9f'); r(7, 3, 2, 6, '#7fff9f'); r(3, 8, 7, 2, '#7fff9f');
+        r(4, 1, 4, 2, '#e6d18a'); r(4, 9, 4, 2, '#e6d18a');
+        break;
+      case 'air':
+        r(1, 4, 4, 2, '#d8d4c4'); r(7, 4, 4, 2, '#d8d4c4'); r(4, 5, 4, 3, '#d8d4c4');
+        r(5, 8, 2, 2, '#c5202e'); r(5, 1, 1, 2, '#ffc46b');
+        break;
+      case 'cluster':
+        r(2, 3, 4, 4, '#ff9e3d'); r(6, 6, 4, 4, '#ffd166'); r(7, 2, 3, 3, '#c5202e');
+        r(2, 8, 3, 3, '#c5202e');
+        break;
       default:
         r(5, 2, 2, 6, '#e8e3d0'); r(5, 9, 2, 2, '#e8e3d0');
     }
@@ -173,7 +189,7 @@
       ctx.strokeRect(r.x + 0.5, y + 0.5, r.w - 1, r.h - 1);
     }
 
-    G.cnfont.draw(ctx, '点击选择 · 确定 / 双击卡牌', G.W / 2, 216, '#7d8a80', 1, 'center');
+    G.cnfont.draw(ctx, '点击选择 · 再点确定 / ENTER', G.W / 2, 216, '#7d8a80', 1, 'center');
     var on = s.selected >= 0;
     ctx.fillStyle = on ? '#3a2a16' : '#161c1e';
     ctx.fillRect(CONFIRM_RECT.x, CONFIRM_RECT.y, CONFIRM_RECT.w, CONFIRM_RECT.h);
@@ -196,8 +212,7 @@
     if (clicked) {
       if (onConfirm && selected >= 0) confirmCb(selected);
       else if (hover >= 0) {
-        if (selected === hover) confirmCb(hover);
-        else selected = hover;
+        selected = hover;
       }
     }
     if (pressed('Digit1') && cards[0]) selected = 0;

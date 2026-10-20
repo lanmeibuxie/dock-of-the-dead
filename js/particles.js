@@ -137,6 +137,19 @@
       }
     },
 
+    spawnMag: function (x, y, dir) {
+      var p = get();
+      if (!p) return;
+      p.kind = 'mag';
+      p.x = x; p.y = y;
+      p.vx = -dir * G.rand(30, 70);
+      p.vy = -G.rand(60, 100);
+      p.size = 3;
+      p.color = '#3a3f2a';
+      p.life = p.maxLife = 2.2;
+      p.grav = 1.1;
+    },
+
     spawnFeather: function (x, y, dir, count) {
       for (var i = 0; i < count; i++) {
         var p = get();
@@ -232,6 +245,14 @@
           p.vy += 160 * dt;
           p.vy *= 0.995;
           if (p.y >= gy) { release(p); continue; }
+        } else if (p.kind === 'mag') {
+          if (p.y >= gy) {
+            p.y = gy;
+            p.vy *= -0.3;
+            p.vx *= 0.6;
+            p.grav = 0;
+            if (Math.abs(p.vy) < 20) p.vy = 0;
+          }
         }
       }
     },
@@ -264,6 +285,10 @@
           ctx.fillRect(sx, sy, 1, 1);
         } else if (p.kind === 'feather') {
           ctx.fillRect(sx, sy, 2, 1);
+        } else if (p.kind === 'mag') {
+          ctx.fillRect(sx, sy, 4, 3);
+          ctx.fillStyle = '#b08a3a';
+          ctx.fillRect(sx, sy, 4, 1);
         } else {
           ctx.fillRect(sx, sy, p.size, p.size);
         }

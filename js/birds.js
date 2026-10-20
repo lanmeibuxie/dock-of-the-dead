@@ -84,41 +84,41 @@
 
     if (this.state === 'circle') {
       var tx = player.x + Math.sin(this.t * 1.6) * 38;
-      var ty = Math.max(G.JET.ceiling + 18, player.y - 108);
+      var ty = Math.max(40, player.y - 62);
       var ax = tx - this.x, ay = ty - this.y;
       var ad = Math.sqrt(ax * ax + ay * ay) || 1;
       this.vx = ax / ad * 90;
       this.vy = ay / ad * 90 + Math.sin(this.t * 6) * 12;
-      if (dist < 52 && this.diveCd <= 0) { this.state = 'aim'; this.diveT = 0.26; }
+      if (dist < 62 && this.diveCd <= 0) { this.state = 'aim'; this.diveT = 0.14; }
     } else if (this.state === 'aim') {
       this.diveT -= dt;
       this.vx *= 0.9;
       this.vy *= 0.9;
-      if (this.diveT <= 0) { this.state = 'dive'; this.diveT = 0.55; this.hitDone = false; }
+      if (this.diveT <= 0) { this.state = 'dive'; this.diveT = 0.6; this.hitDone = false; }
     } else if (this.state === 'dive') {
       var d = Math.sqrt(dx * dx + dy * dy) || 1;
-      this.vx = dx / d * 260;
-      this.vy = dy / d * 260;
+      this.vx = dx / d * this.def.diveSpeed;
+      this.vy = dy / d * this.def.diveSpeed;
       this.diveT -= dt;
-      if (this.diveT <= 0) { this.state = 'climb'; this.climbT = 0.7; }
+      if (this.diveT <= 0) { this.state = 'climb'; this.climbT = 0.45; }
     } else if (this.state === 'climb') {
       this.vy -= 500 * dt;
       this.vx *= 0.96;
       this.climbT -= dt;
-      if (this.climbT <= 0) { this.state = 'circle'; this.diveCd = 2.0; }
+      if (this.climbT <= 0) { this.state = 'circle'; this.diveCd = 1.1; }
     }
 
     this.x += this.vx * dt;
     this.y += this.vy * dt;
     this.y = G.clamp(this.y, 22, G.level.layout.groundY - 18);
 
-    if (!this.hitDone && Math.abs(player.x - this.x) < 16 && Math.abs((player.y - 22) - this.y) < 20) {
+    if (!this.hitDone && Math.abs(player.x - this.x) < 19 && Math.abs((player.y - 22) - this.y) < 24) {
       this.hitDone = true;
       if (player.takeDamage(this.damage, this.x < player.x ? 1 : -1)) {
         G.gfx.cam.shake(0.8);
         G.particles.spawnBlood(player.x, player.y - 22, 1, 5);
         this.state = 'climb';
-        this.climbT = 0.6;
+        this.climbT = 0.5;
       }
     }
   };

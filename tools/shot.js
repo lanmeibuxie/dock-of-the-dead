@@ -14,7 +14,7 @@ const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
   page.on('pageerror', e => errors.push('PAGE: ' + e.message));
   await page.goto(url);
   await page.waitForTimeout(600);
-  if (scenario && !['title','elite','clickstart','upgradepick','upgradedouble','upgradesel','pierce','perf'].includes(scenario)) {
+  if (scenario && !['title','elite','clickstart','upgradepick','upgradedouble','upgradesel','pierce','reload','birdattack','perf'].includes(scenario)) {
     await page.keyboard.press('Enter');
     await page.waitForTimeout(320);
   }
@@ -136,7 +136,7 @@ const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
     await page.mouse.click((box.x + box.w / 2) * 2, (box.y + box.h / 2) * 2);
     await page.waitForTimeout(250);
     const after = await page.evaluate(() => G.game.state);
-    console.log('DOUBLE', JSON.stringify({ selected, after }));
+    console.log('DOUBLE (should stay upgrade)', JSON.stringify({ selected, after }));
     await page.screenshot({ path: out });
     if (errors.length) console.log(errors.join(String.fromCharCode(10))); else console.log('NO PAGE ERRORS');
     await browser.close();
@@ -177,6 +177,27 @@ const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
     await page.waitForTimeout(250);
     await page.screenshot({ path: out });
     console.log('UPGRADESEL', JSON.stringify(await page.evaluate(() => G.game.upgradeState())));
+    if (errors.length) console.log(errors.join(String.fromCharCode(10))); else console.log('NO PAGE ERRORS');
+    await browser.close();
+    return;
+  }
+
+  if (scenario === 'birdattack') {
+    await page.evaluate(() => {
+      G.game.zombies.length = 0;
+      G.game.birds.length = 0;
+      const keep = new G.entities.Zombie('walker', G.game.player.x + 330, false);
+      keep.stagger = 9999;
+      G.game.zombies.push(keep);
+      for (let i = 0; i < 5; i++) {
+        G.game.birds.push(new G.birds.Bird(G.game.player.x + 70 + i * 22, 80, 1));
+      }
+      G.game.player.hp = 100;
+    });
+    await page.waitForTimeout(3200);
+    await page.screenshot({ path: out });
+    const st = await page.evaluate(() => ({ hp: G.game.player.hp, birds: G.game.birds.map(b => b.state), alive: G.game.birds.filter(b => !b.dead).length }));
+    console.log('BIRDATTACK', JSON.stringify(st));
     if (errors.length) console.log(errors.join(String.fromCharCode(10))); else console.log('NO PAGE ERRORS');
     await browser.close();
     return;
@@ -246,6 +267,27 @@ const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
       grenades: G.game.grenades.length, kills: G.game.stats.kills, particles: G.particles.count()
     }));
     console.log('LAUNCHER', JSON.stringify(st));
+    if (errors.length) console.log(errors.join(String.fromCharCode(10))); else console.log('NO PAGE ERRORS');
+    await browser.close();
+    return;
+  }
+
+  if (scenario === 'reload') {
+    await page.keyboard.press('Digit2');
+    await page.waitForTimeout(350);
+    await page.evaluate(() => {
+      G.game.zombies.length = 0;
+      G.game.birds.length = 0;
+      const keep = new G.entities.Zombie('walker', G.game.player.x + 330, false);
+      keep.stagger = 9999;
+      G.game.zombies.push(keep);
+      G.game.player.weapon().ammo = 2;
+    });
+    await page.keyboard.press('KeyR');
+    await page.waitForTimeout(520);
+    await page.screenshot({ path: out });
+    const st = await page.evaluate(() => ({ reloading: G.game.player.weapon().reloading, ammo: G.game.player.weapon().ammo, fx: G.game.player.reloadFx }));
+    console.log('RELOAD', JSON.stringify(st));
     if (errors.length) console.log(errors.join(String.fromCharCode(10))); else console.log('NO PAGE ERRORS');
     await browser.close();
     return;

@@ -4,25 +4,25 @@
   var G = globalThis.G;
 
   var NIGHT = {
-    skyTop: '#0a121a', skyMid: '#10242e', skyBot: '#214650',
-    sun: '#b9c6b8', seaTop: '#1a3a42', seaBot: '#0c222a',
-    waterTop: '#0d2830', waterBot: '#061318',
-    container: ['#1d3138', '#22383a', '#192c31'],
-    crane: '#122630',
-    plank: ['#4a3628', '#3f2e22', '#37281e'],
-    woodDark: '#241a14', woodLight: '#6a4e38',
-    fog: '58,84,88', ambient: 0.23, vignette: 0.24, lamp: 1, rain: 0.20
+    skyTop: '#122636', skyMid: '#1b3d4e', skyBot: '#2f6470',
+    sun: '#d8e4d0', seaTop: '#25515c', seaBot: '#143440',
+    waterTop: '#17404c', waterBot: '#0b242e',
+    container: ['#2b444c', '#324e50', '#264048'],
+    crane: '#1c3540',
+    plank: ['#5c4432', '#4e3a2a', '#443224'],
+    woodDark: '#2e2018', woodLight: '#86664a',
+    fog: '80,110,114', ambient: 0.14, vignette: 0.16, lamp: 1, rain: 0.17
   };
 
   var DAY = {
-    skyTop: '#4a7d90', skyMid: '#7fa8b2', skyBot: '#b8d0cb',
-    sun: '#ffe6a8', seaTop: '#4d7f86', seaBot: '#2a5860',
-    waterTop: '#3f7a80', waterBot: '#20505a',
-    container: ['#4a6064', '#526a6c', '#3d5559'],
-    crane: '#2e4a52',
-    plank: ['#8a6a4a', '#7a5c40', '#6e5238'],
-    woodDark: '#3a2a1e', woodLight: '#b08a62',
-    fog: '190,210,206', ambient: 0.07, vignette: 0.15, lamp: 0, rain: 0.05
+    skyTop: '#3f9fd8', skyMid: '#78c4ea', skyBot: '#c8e8f6',
+    sun: '#fff4c4', seaTop: '#3f8fa8', seaBot: '#2a7088',
+    waterTop: '#4a9eae', waterBot: '#2d7484',
+    container: ['#6a8a90', '#7c9c9e', '#5c7c82'],
+    crane: '#4a6a74',
+    plank: ['#b08a62', '#9c7852', '#8a6844'],
+    woodDark: '#4a3626', woodLight: '#d4b088',
+    fog: '210,232,234', ambient: 0.03, vignette: 0.06, lamp: 0, rain: 0
   };
 
   function parse(hex) {

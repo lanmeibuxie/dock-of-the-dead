@@ -4,6 +4,7 @@ require('../js/core.js');
 require('../js/sprites.js');
 require('../js/level.js');
 require('../js/zombieart.js');
+require('../js/weapons.js');
 require('../js/player.js');
 require('../js/entities.js');
 const G = globalThis.G;
@@ -155,7 +156,7 @@ test('pickup radius and ammo gains scale with mods', () => {
   const pk = new G.entities.Pickup('ammo_minigun', p.x + 25);
   pk.update(0.1, p);
   assert.strictEqual(pk.dead, true);
-  assert.strictEqual(p.weapons.minigun.reserve, 90);
+  assert.strictEqual(p.weapons.minigun.reserve, 120);
 });
 
 test('minigun spin slows movement', () => {

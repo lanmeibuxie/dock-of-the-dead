@@ -5,15 +5,18 @@
 
   var volleyLock = 0;
   var shakeLock = 0;
+  var slowLock = 0;
 
   function reset() {
     volleyLock = 0;
     shakeLock = 0;
+    slowLock = 0;
   }
 
   function update(dt) {
     volleyLock = Math.max(0, volleyLock - dt);
     shakeLock = Math.max(0, shakeLock - dt);
+    slowLock = Math.max(0, slowLock - dt);
   }
 
   function coarseBox(z) {
@@ -31,13 +34,16 @@
     var out = z.hit(box.zone, res.amount, dir, shot.weapon, box.ref, shot.knockScale);
     var gy = ctx.level.layout.groundY;
 
-    if (volleyLock <= 0) {
-      ctx.time.hitstop(G.combat.hitstop(shot.weapon, res.headshot));
-      volleyLock = 0.07;
-    }
-    if (shakeLock <= 0) {
-      ctx.cam.shake(G.combat.shake(shot.weapon, res.headshot) + (shot.crit ? 0.25 : 0));
-      shakeLock = 0.06;
+    if (!shot.fxDone) {
+      shot.fxDone = true;
+      if (volleyLock <= 0) {
+        ctx.time.hitstop(G.combat.hitstop(shot.weapon, res.headshot));
+        volleyLock = 0.11;
+      }
+      if (shakeLock <= 0) {
+        ctx.cam.shake(G.combat.shake(shot.weapon, res.headshot) + (shot.crit ? 0.25 : 0));
+        shakeLock = 0.08;
+      }
     }
     if (ctx.audio) ctx.audio.flesh(res.headshot, G.clamp((z.x - ctx.player.x) / 220, -1, 1));
     ctx.onHit(out.killed, !!shot.crit, res.headshot);
@@ -57,6 +63,7 @@
     if (out.killed) {
       ctx.stats.kills++;
       if (ctx.player.mods.lifesteal) ctx.player.heal(ctx.player.mods.lifesteal);
+      if (ctx.player.mods.ammoRecycle && G.chance(ctx.player.mods.ammoRecycle)) ctx.player.recycleAmmo();
       ctx.addScore((z.def.score || 10) * (ctx.elite ? 2 : 1));
       if (G.chance(0.06)) ctx.spawnLoot(z.x);
       if (res.headshot) {
@@ -64,8 +71,11 @@
         G.entities.spawnLimb(ctx.limbs, z, 'head', hx, hy, dir, 'head');
         ctx.particles.spawnBlood(hx, hy, dir, 46);
         ctx.particles.spawnBone(hx, hy, dir, 12);
-        ctx.time.slowmo(0.32, 0.35);
-        if (shakeLock <= 0) { ctx.cam.shake(1.2); shakeLock = 0.08; }
+        if (!shot.slowDone && slowLock <= 0) {
+          shot.slowDone = true;
+          ctx.time.slowmo(0.2, 0.4);
+          slowLock = 0.5;
+        }
       } else {
         ctx.particles.spawnGib(hx, hy, dir, 4);
         ctx.particles.spawnBlood(hx, hy, dir, 26);
@@ -78,8 +88,11 @@
     var dir = Math.cos(shot.angle) >= 0 ? 1 : -1;
     var dmg = shot.damage * (shot.crit ? ctx.player.mods.critMult : 1);
     var out = bird.hit(dmg, dir, shot.weapon);
-    if (volleyLock <= 0) { ctx.time.hitstop(0.02); volleyLock = 0.06; }
-    if (shakeLock <= 0) { ctx.cam.shake(0.35); shakeLock = 0.06; }
+    if (!shot.fxDone) {
+      shot.fxDone = true;
+      if (volleyLock <= 0) { ctx.time.hitstop(0.01); volleyLock = 0.1; }
+      if (shakeLock <= 0) { ctx.cam.shake(0.25); shakeLock = 0.08; }
+    }
     ctx.onHit(out.killed, !!shot.crit, false);
     ctx.stats.hits++;
     if (ctx.audio) ctx.audio.flesh(false, G.clamp((bird.x - ctx.player.x) / 220, -1, 1));

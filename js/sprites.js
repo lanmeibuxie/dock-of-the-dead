@@ -267,7 +267,7 @@
       if (!hide.armF) drawPivot(ctx, byName.armF, p.shoulderX, p.shoulderY, p.armF - Math.PI / 2);
       if (!hide.head) drawFlat(ctx, byName.head, p.headX, p.headY, flip);
       if (pose.gun) {
-        drawGun(ctx, pose.gun, p.handX, p.handY, p.armF, pose.spin || 0);
+        drawGun(ctx, pose.gun, p.handX, p.handY, p.armF + (pose.gunSpin || 0), pose.spin || 0);
         if (pose.flash > 0) {
           var f = makePart(flash);
           ctx.save();

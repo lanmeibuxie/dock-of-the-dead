@@ -18,8 +18,8 @@
       };
     },
     hitstop: function (weapon, headshot) {
-      var base = weapon === 'shotgun' ? 0.07 : weapon === 'smg' ? 0.04 : weapon === 'minigun' ? 0.012 : weapon === 'kick' ? 0.05 : 0.045;
-      return headshot ? base + 0.03 : base;
+      var base = weapon === 'shotgun' ? 0.05 : weapon === 'smg' ? 0.022 : weapon === 'minigun' ? 0.008 : weapon === 'kick' ? 0.035 : 0.03;
+      return headshot ? base + 0.015 : base;
     },
     shake: function (weapon, headshot) {
       var base = weapon === 'shotgun' ? 1.6 : weapon === 'smg' ? 0.5 : weapon === 'minigun' ? 0.06 : weapon === 'kick' ? 1.0 : 0.7;
